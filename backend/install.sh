@@ -1,11 +1,11 @@
-#!/bin/bash
+#!/bin/sh
 #Built for Ubuntu 16.10 Server
 if [ "$EUID" -ne 0 ]
   then echo "Please run as root"
   exit
 fi
 
-apt-get -y install unzip make gcc git libreadline-dev sqlite3 libsqlite3-dev libssl-dev youtube-dl ffmpeg handbrake-cli
+apt-get -y install unzip make gcc git libreadline-dev sqlite3 libsqlite3-dev libssl-dev #youtube-dl ffmpeg handbrake-cli
 
 mkdir /tmp/lua
 cd /tmp/lua
@@ -28,6 +28,7 @@ make install
 cd ~
 rm -rf /tmp/lua
 
-luarocks install luajson
+luarocks install luajson #Not sure if needed in final build, as json is really only used for development purposes.
 luarocks install lsqlite3
 luarocks install luasec #Includes LuaSocket
+luarocks install sha2

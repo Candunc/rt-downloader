@@ -1,5 +1,4 @@
---
-http = require("socket.http") -- Requires luasocket; avoids the over-use of cURL and support of systems that _don't_ have cURL installed.
+#!/bin/which lua
 sqlite3 = require("lsqlite3")
 db = sqlite3.open("rt.sqlite3") --Open a local file read/write, doesn't have to exist.
 
@@ -31,11 +30,15 @@ season		varchar(10)
 --	[DONE] Create a sqlite3 database (Mentioned above for column types)
 --	[DONE] Feed scraped results into mentioned sqlite table, checking for duplicates.
 --	[DONE] Creating jobs to scrape additional metadata for the videos. 
---	Move SHA256sum to a luarock compatible version, rather than rely on the OS command.
+--	[DONE] Move SHA256sum to a luarock compatible version, rather than rely on the OS command.
 --
 --	For the sqlite3 database, as the front-end is a READ ONLY implementation, should we load it into a RAMDisk and occasionally check for updates?
 
 json = require("json")
+http = require("socket.http")
+-- We have both luasocket and luasec installed, however we will be using http for development purposes.
+
+--[[ Old hash function. Kept for debug purposes.
 function hash(input)
 	input = string.lower(string.gsub(string.gsub(input,"%s",""),"%W",""))
 	--So, what this does is 'standardize' the string. It strips the spaces, and removes all non-alphanumeric characters. 
@@ -44,6 +47,10 @@ function hash(input)
 	local out = string.sub(handle:read("*a"),1,64)
 	handle:close()
 	return out
+end]]
+function hash(input)
+	local t = string.gsub(string.gsub(input,"%s",""),"%W","") --Strips spaces and non-alphanumeric characters. Part of "standardizing" the string.
+	return sha2.sha256hex(t) --Return sha256 hash of above string. 
 end
 
 function wget(url)
