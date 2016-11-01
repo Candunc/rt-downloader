@@ -3,7 +3,7 @@ sqlite3 = require("lsqlite3")
 db = sqlite3.open("rt.sqlite3") --Open a local file read/write, doesn't have to exist.
 
 -- Table is MetaData because it contains basic information about a video;
-db:exec("CREATE TABLE IF NOT EXISTS Metadata (processed INTEGER DEFAULT 0, name varchar(100) NOT NULL, time char(10) NOT NULL, site varchar(100) NOT NULL, url varchar(2048) NOT NULL, image varchar(2048) NOT NULL, hash char(64) NOT NULL, UNIQUE(name, show, url, image, hash))")
+db:exec("CREATE TABLE IF NOT EXISTS Metadata (processed INTEGER DEFAULT 0, name varchar(100) NOT NULL, time char(10) NOT NULL, site varchar(100) NOT NULL, url varchar(2048) NOT NULL, image varchar(2048) NOT NULL, hash char(64) NOT NULL, UNIQUE(name, url, image, hash))")
 --Unique term stolen from here: http://stackoverflow.com/a/19343100/1687505
 
 for _,value in ipairs({"RoosterTeeth";"TheKnow";}) do --Starting small with a whole TWO tables. Insert the following into the table to enable: "AchievementHunter";"Funhaus";"ScrewAttack";"GameAttack";"CowChop";
