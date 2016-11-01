@@ -5,6 +5,11 @@ if [ "$EUID" -ne 0 ]
   exit
 fi
 
+#Assumes that the current directory was git cloned from the repo.
+#Todo: Chown the directories and stuff to the user. 
+mkdir /opt/rt-downloader/
+cp ./backend/rt.lua /opt/rt-downloader/
+
 apt-get -y install unzip make gcc git libreadline-dev sqlite3 libsqlite3-dev libssl-dev #youtube-dl ffmpeg handbrake-cli
 
 mkdir /tmp/lua
