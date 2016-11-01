@@ -3,7 +3,7 @@ sqlite3 = require("lsqlite3")
 db = sqlite3.open("rt.sqlite3") --Open a local file read/write, doesn't have to exist.
 
 -- Table is MetaData because it contains basic information about a video;
-db:exec("CREATE TABLE IF NOT EXISTS Metadata (processed INTEGER DEFAULT 0, name varchar(100) NOT NULL, time char(10) NOT NULL, show varchar(100) NOT NULL, url varchar(2048) NOT NULL, image varchar(2048) NOT NULL, hash char(64) NOT NULL, UNIQUE(name, show, url, image, hash))")
+db:exec("CREATE TABLE IF NOT EXISTS Metadata (processed INTEGER DEFAULT 0, name varchar(100) NOT NULL, time char(10) NOT NULL, site varchar(100) NOT NULL, url varchar(2048) NOT NULL, image varchar(2048) NOT NULL, hash char(64) NOT NULL, UNIQUE(name, show, url, image, hash))")
 --Unique term stolen from here: http://stackoverflow.com/a/19343100/1687505
 
 db:exec("CREATE TABLE IF NOT EXISTS RoosterTeeth (hash char(64) NOT NULL, time char(10) NOT NULL, title varchar(100) NOT NULL, show varchar(100) NOT NULL, description varchar(500) NOT NULL, season varchar(10) NOT NULL, UNIQUE(hash,title,show,description))")
@@ -13,7 +13,7 @@ Table: MetaData
 processed boolean	--True if the video has been indexed (All data downloaded) and stored in another table.
 hash char(64)		--SHA256sum encoded in ascii
 name varchar(100)	--Assuming that title lengths are sane, and short. Based on youtube max title langth.
-show varchar(100)	--Because Rooster Teeth is split up into sub channels, it is useful to grab the show name as well.
+site varchar(100)	--Because Rooster Teeth is split up into sub channels, it is useful to grab the site name as well.
 img  varchar(200)
 url  varchar(200)	--Hopefully 200 characters will be long enough. 2048 is the maximum length, however most if not all will be shorter than that. 
 
@@ -71,7 +71,7 @@ function ScrapeNew()
 	local count = 0
 --	local db = {} Used in development purposes. Returns a table that was converted into JSON for development purposes.
 	--Prepared statement for SQL. Will be executed once for every single item. 
-	local statement = db:prepare("INSERT OR IGNORE INTO Metadata(name, time, show, url, image, hash) VALUES(:name, :time, :show, :url, :image, :hash)")
+	local statement = db:prepare("INSERT OR IGNORE INTO Metadata(name, time, site, url, image, hash) VALUES(:name, :time, :site, :url, :image, :hash)")
 	-- OR IGNORE -> Ignore duplicates. Corresponds to the unique term on line 7.
 	out = string.gsub(out,"<li>","\029") -- Ascii Decimal 029 = group seperator ascii. Chosen as no sane webpage would have control ascii embedded.
 	for value in string.gmatch(out,"[^\029]+") do
@@ -91,7 +91,7 @@ function ScrapeNew()
 
 			local i = string.find(img,"-",(string.find(img,"md")),true)
 			time = string.sub(img,i+1,i+10) --Timestamp is in milliseconds. Change "20" to "23" to include millisecond precision.
-			statement:bind_names({name=name;time=time;show="Rooster Teeth";url=url;image=img;hash=hash(name);})
+			statement:bind_names({name=name;time=time;site="Rooster Teeth";url=url;image=img;hash=hash(name);})
 			local val = statement:step() 
 			if val ~= 101 then
 				print("Something went wrong... "..val)
