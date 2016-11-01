@@ -6,7 +6,9 @@ db = sqlite3.open("rt.sqlite3") --Open a local file read/write, doesn't have to 
 db:exec("CREATE TABLE IF NOT EXISTS Metadata (processed INTEGER DEFAULT 0, name varchar(100) NOT NULL, time char(10) NOT NULL, site varchar(100) NOT NULL, url varchar(2048) NOT NULL, image varchar(2048) NOT NULL, hash char(64) NOT NULL, UNIQUE(name, show, url, image, hash))")
 --Unique term stolen from here: http://stackoverflow.com/a/19343100/1687505
 
-db:exec("CREATE TABLE IF NOT EXISTS RoosterTeeth (hash char(64) NOT NULL, time char(10) NOT NULL, title varchar(100) NOT NULL, show varchar(100) NOT NULL, description varchar(500) NOT NULL, season varchar(10) NOT NULL, UNIQUE(hash,title,show,description))")
+for _,value in ipairs({"RoosterTeeth";"TheKnow";}) do --Starting small with a whole TWO tables. Insert the following into the table to enable: "AchievementHunter";"Funhaus";"ScrewAttack";"GameAttack";"CowChop";
+	db:exec("CREATE TABLE IF NOT EXISTS "..value.." (hash char(64) NOT NULL, time char(10) NOT NULL, title varchar(100) NOT NULL, show varchar(100) NOT NULL, description varchar(500) NOT NULL, season varchar(10) NOT NULL, UNIQUE(hash,title,show,description))")
+end
 
 --[[
 Table: MetaData
@@ -59,12 +61,12 @@ function wget(url)
 	return (http.request(url))
 end
 
-function ScrapeNew()
+function ScrapeNew_Helper(url,site)
 	--Web scraper to get latest episodes to add to local database.
 	--Grabs the _FIRST PAGE_ or 24 most recent videos from the recently added page.
 	--Returns a table with the following datasets: name, url, image url, and finally a hash of the name for cross-table referencing.
 
-	local data = wget("http://roosterteeth.com/episode/recently-added")
+	local data = wget(url)
 
 	local out = string.sub(data,(string.find(data,"<!-- =============== BEGIN PAGE BODY =============== -->",1,true)),(string.find(data,"<!-- =============== BEGIN FOOTER =============== -->",1,true)))
 	-- Need to use plain searches as there are some special characters.
@@ -91,7 +93,7 @@ function ScrapeNew()
 
 			local i = string.find(img,"-",(string.find(img,"md")),true)
 			time = string.sub(img,i+1,i+10) --Timestamp is in milliseconds. Change "20" to "23" to include millisecond precision.
-			statement:bind_names({name=name;time=time;site="Rooster Teeth";url=url;image=img;hash=hash(name);})
+			statement:bind_names({name=name;time=time;site=site;url=url;image=img;hash=hash(name);})
 			local val = statement:step() 
 			if val ~= 101 then
 				print("Something went wrong... "..val)
@@ -105,14 +107,21 @@ function ScrapeNew()
 --	return db
 end
 
-function ScrapeVideo(hash)
+function ScrapeNew()
+	local input = json.decode('{"RoosterTeeth":"http://roosterteeth.com/episode/recently-added","TheKnow":"http://theknow.roosterteeth.com/episode/recently-added"}')
+	for site,url in input do
+		ScrapeNew_Helper(url,site)
+	end
+end
+
+function ScrapeVideo(hash,site)
 	for entry in db:nrows("SELECT * FROM Metadata where hash IS \""..hash.."\"") do --Yes. Potential for SQL Injection. Spooky.
 		local raw = wget(entry["url"])
 
 		local a = string.find(raw,"<div id=\"others-you-like-carousel-comment\">",1,true)+49
 		local data = string.sub(raw,a,string.find(raw,"-->",a,true)-1)
 
-		local statement = db:prepare("INSERT OR IGNORE INTO RoosterTeeth(hash, time, title, show, description, season) VALUES(:hash, :time, :title, :show, :description, :season)")
+		local statement = db:prepare("INSERT OR IGNORE INTO "..site.."(hash, time, title, show, description, season) VALUES(:hash, :time, :title, :show, :description, :season)")
 		for key,value in ipairs(json.decode(data)) do 
 			if value["url"] == entry["url"] then
 				statement:bind_names({hash=entry["hash"];time=string.sub(value["sponsor_golive_at"],1,10);title=value["title"];show=value["season"]["show"]["name"];description=value["description"];season=value["season"]["title"];})
@@ -130,7 +139,7 @@ end
 
 ScrapeNew()
 for a in db:nrows("SELECT * FROM Metadata where processed IS 0;") do
-	ScrapeVideo(a["hash"])
+	ScrapeVideo(a["hash"],a["site"])
 end
 
 db:close()
