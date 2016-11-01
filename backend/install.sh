@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #Built for Ubuntu 16.10 Server
 if [ "$EUID" -ne 0 ]
   then echo "Please run as root"
