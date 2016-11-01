@@ -33,7 +33,7 @@ make install
 cd ~
 rm -rf /tmp/lua
 
-luarocks install luajson #Not sure if needed in final build, as json is really only used for development purposes.
+luarocks install luajson	#Not sure if needed in final build, as json is really only used for development purposes.
 luarocks install lsqlite3
-luarocks install luasec #Includes LuaSocket
-luarocks install sha2
+luarocks install luasec		#Includes LuaSocket
+luarocks install lsha2		#SHA2 failed to compile on test machine, replaced with lsha2. 

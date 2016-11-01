@@ -37,6 +37,7 @@ season		varchar(10)
 json = require("json")
 http = require("socket.http")
 -- We have both luasocket and luasec installed, however we will be using http for development purposes.
+lsha2 = require("lsha2")
 
 --[[ Old hash function. Kept for debug purposes.
 function hash(input)
@@ -50,7 +51,7 @@ function hash(input)
 end]]
 function hash(input)
 	local t = string.gsub(string.gsub(input,"%s",""),"%W","") --Strips spaces and non-alphanumeric characters. Part of "standardizing" the string.
-	return sha2.sha256hex(t) --Return sha256 hash of above string. 
+	return lsha2.hash256(t) --Return sha256 hash of above string. 
 end
 
 function wget(url)
