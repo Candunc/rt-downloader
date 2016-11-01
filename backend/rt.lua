@@ -109,7 +109,7 @@ end
 
 function ScrapeNew()
 	local input = json.decode('{"RoosterTeeth":"http://roosterteeth.com/episode/recently-added","TheKnow":"http://theknow.roosterteeth.com/episode/recently-added"}')
-	for site,url in input do
+	for site,url in pairs(input) do
 		ScrapeNew_Helper(url,site)
 	end
 end
