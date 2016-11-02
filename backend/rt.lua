@@ -83,6 +83,12 @@ function ScrapeNew_Helper(url,site)
 			local c = string.find(value,"<p class=\"name\">")+16
 			name = string.sub(value,c,(string.find(value,"</p>",c,true)-1))
 
+--			As of 2016-11-02 RoosterTeeth added a timestamp to their added videos. 
+--			It would be very easy to strip and add to the database, however our stripped timestamp is fairly accurate AND easily sortable.
+
+--			local d = string.find(value,"<p class=\"post-stamp\">")+22
+--			poststamp = string.sub(value,c,c+10)
+
 			local i = string.find(img,"-",(string.find(img,"md")),true)
 			time = string.sub(img,i+1,i+10) --Timestamp is in milliseconds. Change "20" to "23" to include millisecond precision.
 			statement:bind_names({name=name;time=time;site=site;url=url;image=img;hash=hash(name);})
@@ -129,9 +135,23 @@ function ScrapeVideo(hash,site)
 	end
 end
 
+function UpdateFrontend()
+	local output = {}
+	local count = 0
+	for entry in db:nrows("SELECT * FROM ( SELECT * FROM Metadata ORDER BY time DESC LIMIT 12 ) T1 ORDER BY time DESC") do
+		count = (count+1)
+		output[count] = entry
+	end
+
+	local file = io.open("frontpage.json","w")
+	file:write(json.encode(output))
+	file:close()
+end
+
 ScrapeNew()
 for a in db:nrows("SELECT * FROM Metadata where processed IS 0;") do
 	ScrapeVideo(a["hash"],a["site"])
 end
+UpdateFrontend()
 
 db:close()
