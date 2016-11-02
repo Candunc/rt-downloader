@@ -1,0 +1,53 @@
+.navbar {
+  margin-bottom: 0;
+}
+
+/* Move down content because we have a fixed navbar that is 50px tall */
+body {
+  padding-bottom: 2rem;
+}
+
+.album {
+  padding-top: 3rem;
+  padding-bottom: 3rem;
+  background-color: #f7f7f7;
+}
+
+.card {
+  float: left;
+  width: 33.333%;
+  padding: .75rem;
+  margin-bottom: 2rem;
+  border: 0;
+}
+
+.card > img {
+  margin-bottom: .75rem;
+}
+
+.card-text {
+  font-size: 85%;
+}
+
+/* Past this point is no longer bootstrap example code */
+.video {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+img {
+  margin-top: 1rem;
+  width: 100%;
+  margin-bottom: .5rem;
+}
+
+footer {
+  background-color: #fcfcfc;
+  text-align: center;
+  position: fixed;
+  padding-top: 1rem;
+  clear:both;
+  width: 100%;
+  bottom:0px;
+  z-index: 0;
+}

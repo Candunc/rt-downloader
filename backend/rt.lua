@@ -3,11 +3,11 @@ sqlite3 = require("lsqlite3")
 db = sqlite3.open("rt.sqlite3") --Open a local file read/write, doesn't have to exist.
 
 -- Table is MetaData because it contains basic information about a video;
-db:exec("CREATE TABLE IF NOT EXISTS Metadata (processed INTEGER DEFAULT 0, name varchar(100) NOT NULL, time char(10) NOT NULL, site varchar(100) NOT NULL, url varchar(2048) NOT NULL, image varchar(2048) NOT NULL, hash char(64) NOT NULL, UNIQUE(name, url, image, hash))")
+db:exec("CREATE TABLE IF NOT EXISTS Metadata (processed INTEGER DEFAULT 0, name varchar(100) NOT NULL, time char(10) NOT NULL, site varchar(100) NOT NULL, url varchar(2048) NOT NULL, image varchar(2048) NOT NULL, hash char(64) NOT NULL, UNIQUE(name,url,image,hash))")
 --Unique term stolen from here: http://stackoverflow.com/a/19343100/1687505
 
 for _,value in ipairs({"RoosterTeeth";"TheKnow";}) do --Starting small with a whole TWO tables. Insert the following into the table to enable: "AchievementHunter";"Funhaus";"ScrewAttack";"GameAttack";"CowChop";
-	db:exec("CREATE TABLE IF NOT EXISTS "..value.." (hash char(64) NOT NULL, time char(10) NOT NULL, title varchar(100) NOT NULL, show varchar(100) NOT NULL, description varchar(500) NOT NULL, season varchar(10) NOT NULL, UNIQUE(hash,title,show,description))")
+	db:exec("CREATE TABLE IF NOT EXISTS "..value.." (hash char(64) NOT NULL, time char(10) NOT NULL, title varchar(100) NOT NULL, show varchar(100) NOT NULL, description varchar(500) NOT NULL, season varchar(10) NOT NULL, UNIQUE(hash,title,description))")
 end
 
 --[[
@@ -24,17 +24,9 @@ hash 		char(64)
 time 		char(10)		--Publication date (FOR SPONSORS) in the format yyyy-mm-dd
 title		varchar(100)
 show		varchar(100)
-description varchar(1000)	--RWBY has 600 character descriptions, so it had to be upped from 500.
+description varchar(1000)	--RWBY has 600+ character descriptions, so it had to be upped from 500.
 season		varchar(10)
 ]]
-
--- Todo:
---	[DONE] Create a sqlite3 database (Mentioned above for column types)
---	[DONE] Feed scraped results into mentioned sqlite table, checking for duplicates.
---	[DONE] Creating jobs to scrape additional metadata for the videos. 
---	[DONE] Move SHA256sum to a luarock compatible version, rather than rely on the OS command.
---
---	For the sqlite3 database, as the front-end is a READ ONLY implementation, should we load it into a RAMDisk and occasionally check for updates?
 
 json = require("json")
 http = require("socket.http")
@@ -133,7 +125,7 @@ function ScrapeVideo(hash,site)
 			end
 		end
 
-		db:exec("UPDATE MetaData SET processed=1 WHERE hash is \""..hash.."\"")
+		db:exec("UPDATE Metadata SET processed=1 WHERE hash is \""..hash.."\"")
 	end
 end
 
