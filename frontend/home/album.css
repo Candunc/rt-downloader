@@ -27,11 +27,13 @@ body {
 
 .card-text {
   font-size: 85%;
+  white-space: 
+  nowrap; 
+  overflow: hidden; 
+  text-overflow: ellipsis;
 }
 
-/* Past this point is no longer bootstrap example code */
 .video {
-  margin-bottom: 2rem;
   text-align: center;
 }
 

@@ -95,6 +95,7 @@ function ScrapeNew_Helper(url,site)
 			local val = statement:step() 
 			if val ~= 101 then
 				print("Something went wrong... "..val)
+				print(db:errcode(),db:errmsg())
 			end
 			statement:reset()
 
@@ -126,8 +127,10 @@ function ScrapeVideo(hash,site)
 				local val = statement:step() 
 				if val ~= 101 then
 					print("Something went wrong... "..val)
+					print(db:errcode(),db:errmsg())
 				end
 				statement:reset()
+				break
 			end
 		end
 
