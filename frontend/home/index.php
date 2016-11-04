@@ -32,7 +32,7 @@
 $videos = json_decode(file_get_contents("frontpage.json"),true);
 $a = '';
 foreach ($videos as $key => $value) {
-	$a = ($a . '<a href="/video/' . $value["hash"] . '"><div class="col-lg-4 col-md-6 video"><img src="https:' . $value["image"] . '"><p class="card-text">' . $value["name"] . '</p></div></a>' . PHP_EOL); #Make the entire div clickable. Nothing could go wrong with that.
+	$a = ($a . '<a href="video.php?v=' . $value["hash"] . '"><div class="col-lg-4 col-md-6 video"><img src="https:' . $value["image"] . '"><p class="card-text">' . $value["name"] . '</p></div></a>' . PHP_EOL); #Make the entire div clickable. Nothing could go wrong with that.
 }
 
 

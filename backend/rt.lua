@@ -152,7 +152,7 @@ function UpdateFrontend()
 end
 
 ScrapeNew()
-for a in db:nrows("SELECT * FROM Metadata where processed IS 0;") do
+for a in db:nrows("SELECT * FROM Metadata WHERE processed IS 0;") do
 	ScrapeVideo(a["hash"],a["site"])
 end
 UpdateFrontend()
