@@ -44,8 +44,8 @@ function hash(input)
 	return out
 end]]
 function hash(input)
-	local t = string.gsub(string.gsub(input,"%s",""),"%W","") --Strips spaces and non-alphanumeric characters. Part of "standardizing" the string.
-	return lsha2.hash256(t) --Return sha256 hash of above string. 
+	local t = string.lower(string.gsub(string.gsub(input,"%s",""),"%W","")) --Strips spaces and non-alphanumeric characters. Part of "standardizing" the string.
+	return lsha2.hash256(t) --Return sha256 hash of above string.
 end
 
 function wget(url)

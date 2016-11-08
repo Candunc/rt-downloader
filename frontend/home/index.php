@@ -30,13 +30,9 @@
 			<div class="row" style="padding-bottom: 1rem; background-color: #fff; color: #373a3c">
 <?php #I totally forgot you could embed php in a webpage. Idiot.
 $videos = json_decode(file_get_contents("frontpage.json"),true);
-$a = '';
 foreach ($videos as $key => $value) {
-	$a = ($a . '<a href="video.php?v=' . $value["hash"] . '"><div class="col-lg-4 col-md-6 video"><div class="ratio" style="background-image:url(\'https:' . $value["image"] . '\');"></div> <p class="card-text">' . $value["name"] . '</p></div></a>' . PHP_EOL); #Make the entire div clickable. Nothing could go wrong with that.
+	echo('<a id="' . (string)$key . '" href="video.php?v=' . $value["hash"] . '"><div class="col-lg-4 col-md-6 video"><div class="ratio" style="background-image:url(\'https:' . $value["image"] . '\');"></div> <p class="card-text">' . $value["name"] . '</p></div></a>' . PHP_EOL); #Make the entire div clickable. Nothing could go wrong with that.
 }
-
-
-echo($a); #Spit out our garbage webpage.
 ?>
 			</div>
 		</div>
