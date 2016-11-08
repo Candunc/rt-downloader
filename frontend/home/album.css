@@ -33,14 +33,23 @@ body {
   text-overflow: ellipsis;
 }
 
-.video {
-  text-align: center;
+.ratio{ /* "slightly" stolen from stackoverflow. http://stackoverflow.com/a/12859283/1687505 */
+  position:relative;
+  width: 100%;
+  height: 0;
+  padding-bottom: 56.25% ; /* % of width, defines aspect ratio: 16:9*/
+  
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: cover;  
+
+  /*imported from previous img css */
+  margin-top: 1rem;
+  margin-bottom: .5rem;
 }
 
-img {
-  margin-top: 1rem;
-  width: 100%;
-  margin-bottom: .5rem;
+.video {
+  text-align: center;
 }
 
 footer {
