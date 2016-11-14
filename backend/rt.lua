@@ -123,7 +123,9 @@ function ScrapeVideo(hash,site)
 		local statement = db:prepare("INSERT OR IGNORE INTO "..site.."(hash, time, title, show, description, season) VALUES(:hash, :time, :title, :show, :description, :season)")
 		for key,value in ipairs(json.decode(data)) do 
 			if value["url"] == entry["url"] then
-				statement:bind_names({hash=entry["hash"];time=string.sub(value["sponsor_golive_at"],1,10);title=value["title"];show=value["season"]["show"]["name"];description=value["description"];season=value["season"]["title"];})
+				description = value["description"]
+				description = string.gsub(description,"[\n]+", "\n")
+				statement:bind_names({hash=entry["hash"];time=string.sub(value["sponsor_golive_at"],1,10);title=value["title"];show=value["season"]["show"]["name"];description=description;season=value["season"]["title"];})
 				local val = statement:step() 
 				if val ~= 101 then
 					print("Something went wrong... "..val)

@@ -15,13 +15,16 @@
 			<a class="navbar-brand" href="#">RT Downloader</a>
 			<ul class="nav navbar-nav">
 				<li class="nav-item active">
-					<a class="nav-link" href="#">Home <span class="sr-only">(current)</span></a>
+					<a class="nav-link" href="https://rtdownloader.com/">Home <span class="sr-only">(current)</span></a>
 				</li>
 				<li class="nav-item">
-					<a class="nav-link" href="#">About</a>
+					<a class="nav-link" href="https://rtdownloader.com/home">Videos</a>
 				</li>
 				<li class="nav-item">
-					<a class="nav-link" href="#">Contact</a>
+					<a class="nav-link" href="https://rtdownloader.com/about">About</a>
+				</li>
+				<li class="nav-item">
+					<a class="nav-link" href="https://rtdownloader.com/contact">Contact</a>
 				</li>
 		  </ul>
 		</nav>
