@@ -3,46 +3,49 @@ sqlite3 = require("lsqlite3")
 db = sqlite3.open("rt.sqlite3") --Open a local file read/write, doesn't have to exist.
 
 -- Table is MetaData because it contains basic information about a video;
-db:exec("CREATE TABLE IF NOT EXISTS Metadata (processed INTEGER DEFAULT 0, name varchar(100) NOT NULL, time char(10) NOT NULL, site varchar(100) NOT NULL, url varchar(2048) NOT NULL, image varchar(2048) NOT NULL, hash char(64) NOT NULL, UNIQUE(name,url,image,hash))")
---Unique term stolen from here: http://stackoverflow.com/a/19343100/1687505
+db:exec("CREATE TABLE IF NOT EXISTS Metadata (processed int default 0, hash char(64) NOT NULL, sponsor int, channelUrl varchar(32), slug varchar(100), showName varchar(100), title varchar(200), caption varchar(1000), description varchar(1000), image varchar(200), imageMedium varchar(200), releaseDate char(10), unique(hash))")
 
+--[[ Disabled as rewrite of main code is underway. 
 for _,value in ipairs({"RoosterTeeth";"TheKnow";}) do --Starting small with a whole TWO tables. Insert the following into the table to enable: "AchievementHunter";"Funhaus";"ScrewAttack";"GameAttack";"CowChop";
-	db:exec("CREATE TABLE IF NOT EXISTS "..value.." (hash char(64) NOT NULL, time char(10) NOT NULL, title varchar(100) NOT NULL, show varchar(100) NOT NULL, description varchar(500) NOT NULL, season varchar(10) NOT NULL, UNIQUE(hash,title,description))")
-end
+	db:exec("CREATE TABLE IF NOT EXISTS "..value.." (hash char(64) NOT NULL, time char(10), release char(10), sponsor INTEGER, title varchar(100) NOT NULL, show varchar(100) NOT NULL, description varchar(500), season varchar(10), UNIQUE(hash,title,description))")
+end]]
 
 --[[
-Table: MetaData
-processed boolean	--True if the video has been indexed (All data downloaded) and stored in another table.
-hash char(64)		--SHA256sum encoded in ascii
-name varchar(100)	--Assuming that title lengths are sane, and short. Based on youtube max title langth.
-site varchar(100)	--Because Rooster Teeth is split up into sub channels, it is useful to grab the site name as well.
-img  varchar(200)
-url  varchar(200)	--Hopefully 200 characters will be long enough. 2048 is the maximum length, however most if not all will be shorter than that. 
+Table: Metadata **NEW** with updates to the RoosterTeeth site this table has been completely changed. Good thing we're not in production.
+processed	int				Base2 Boolean (0,1); 1 if data has been scraped from the respective webpage.
+hash 		char(64)		hash of title, used for linking additional information across tables.
+
+sponsor		int				Boolean, states if a title is restricted to sponsors or not.
+channelUrl	varchar(32)		Base portion of the URL
+slug		varchar(100)	Final portion of the URL; points to the webpage
+showName	varchar(100)	The name of the show, IE "Rooster Teeth Podcast"
+title		varchar(200)	The title of the episode
+caption		varchar(1000)	Tagline of episode?
+description	varchar(1000)	Plain (no HTML tags) description.
+image		varchar(200)	Full resolution episode image
+imageMedium	varchar(200)	Reduced resolution image (960px × 540px)
+releaseDate char(10)		Time episode was added to website, eg "2016-11-15"
+
+
+The following table will likely have to be redone.
 
 Table: [SITE NAME]
 hash 		char(64)
 time 		char(10)		--Publication date (FOR SPONSORS) in the format yyyy-mm-dd
+release		char(10)		--**NEW** Publication date for non-sponsor accounts (Not public). NOTE: If this is the same as time, then it is sponsor only content.
+sponsor		boolean			--**NEW** Checks if the video is restricted to sponsors.
 title		varchar(100)
 show		varchar(100)
 description varchar(1000)	--RWBY has 600+ character descriptions, so it had to be upped from 500.
 season		varchar(10)
 ]]
 
+require("socket")
 json = require("json")
 http = require("socket.http")
--- We have both luasocket and luasec installed, however we will be using http for development purposes.
+https = require("ssl.https")
 lsha2 = require("lsha2")
 
---[[ Old hash function. Kept for debug purposes.
-function hash(input)
-	input = string.lower(string.gsub(string.gsub(input,"%s",""),"%W",""))
-	--So, what this does is 'standardize' the string. It strips the spaces, and removes all non-alphanumeric characters. 
-	--It also converts all the letters to lowercase so typos are less likely to cause duplicated metadata.
-	local handle = io.popen("echo \""..input.."\" | sha256sum")
-	local out = string.sub(handle:read("*a"),1,64)
-	handle:close()
-	return out
-end]]
 function hash(input)
 	local t = string.lower(string.gsub(string.gsub(input,"%s",""),"%W","")) --Strips spaces and non-alphanumeric characters. Part of "standardizing" the string.
 	return lsha2.hash256(t) --Return sha256 hash of above string.
@@ -53,79 +56,72 @@ function wget(url)
 	return (http.request(url))
 end
 
-function ScrapeNew_Helper(url,site)
-	--Web scraper to get latest episodes to add to local database.
-	--Grabs the _FIRST PAGE_ or 24 most recent videos from the recently added page.
-	--Returns a table with the following datasets: name, url, image url, and finally a hash of the name for cross-table referencing.
+function swget(url) --Added for https support. Not currently required as https is a lot harder to process compared to http.
+	return (https.request(url))
+end
 
-	local data = wget(url)
+function ScrapeNew_Helper(id)
+	local input = json.decode(wget("http://roosterteeth.com/api/internal/episodes/recent?channel="..id.."&page=1&limit=24"))
+	local statement = db:prepare("INSERT OR IGNORE INTO Metadata(hash, sponsor, channelUrl, slug, showName, title, caption, description, image, imageMedium, releaseDate) VALUES(:hash, :sponsor, :channelUrl, :slug, :showName, :title, :caption, :description, :image, :imageMedium, :releaseDate)")
 
-	local out = string.sub(data,(string.find(data,"<!-- =============== BEGIN PAGE BODY =============== -->",1,true)),(string.find(data,"<!-- =============== BEGIN FOOTER =============== -->",1,true)))
-	-- Need to use plain searches as there are some special characters.
-	local count = 0
---	local db = {} Used in development purposes. Returns a table that was converted into JSON for development purposes.
-	--Prepared statement for SQL. Will be executed once for every single item. 
-	local statement = db:prepare("INSERT OR IGNORE INTO Metadata(name, time, site, url, image, hash) VALUES(:name, :time, :site, :url, :image, :hash)")
-	-- OR IGNORE -> Ignore duplicates. Corresponds to the unique term on line 7.
-	out = string.gsub(out,"<li>","\029") -- Ascii Decimal 029 = group seperator ascii. Chosen as no sane webpage would have control ascii embedded.
-	for value in string.gmatch(out,"[^\029]+") do
-		if count ~= 0 and count < 25 then
-			local a = string.find(value,"<a href=\"",1,true)+9
-			url = string.sub(value,a,(string.find(value,"\">",a,true)-1))
-
-			local b = string.find(value,"<img src=\"",1,true)+10 --Used twice, easier to cache value
-			if string.find(value,"\" alt=") == nil then
-				img = string.sub(value,b,(string.find(value,"\">",b,true)-1)) --Used to set search for end of phrase starting at beginning of phrase.
-			else
-				img = string.sub(value,b,(string.find(value,"\" alt=",b,true)-1))
-			end
-
-			local c = string.find(value,"<p class=\"name\">")+16
-			name = string.sub(value,c,(string.find(value,"</p>",c,true)-1))
-
---			As of 2016-11-02 RoosterTeeth added a timestamp to their added videos. 
---			It would be very easy to strip and add to the database, however our stripped timestamp is fairly accurate AND easily sortable.
-
---			local d = string.find(value,"<p class=\"post-stamp\">")+22
---			poststamp = string.sub(value,c,c+10)
-
-			local i = string.find(img,"-",(string.find(img,"md")),true)
-			time = string.sub(img,i+1,i+10) --Timestamp is in milliseconds. Change "20" to "23" to include millisecond precision.
-			statement:bind_names({name=name;time=time;site=site;url=url;image=img;hash=hash(name);})
-			local val = statement:step() 
-			if val ~= 101 then
-				print("Something went wrong... "..val)
-				print(db:errcode(),db:errmsg())
-			end
-			statement:reset()
-
---			db[count] = {name=name;url=url;img=img;hash=hash(name)} --> Super creative naming scheme.
+	for _,value in ipairs(input["data"]) do
+		if value["attributes"]["isPremium"] == true then
+			value["attributes"]["sponsor"] = 1 -- We store boolean values as base2 because of sqlite limitations on boolean values.
+		else
+			value["attributes"]["sponsor"] = 0
 		end
-		count = (count+1)
+
+		value["attributes"]["description"] = string.gsub(value["attributes"]["description"],"[\n]+", "\n")
+
+		value["attributes"]["hash"] = hash(value["attributes"]["title"])
+		value["attributes"]["releaseDate"] = string.sub(value["attributes"]["releaseDate"],1,10)
+
+		statement:bind_names(value["attributes"])
+		local val = statement:step() 
+		if val ~= 101 then
+			print("Something went wrong... "..val)
+			print(db:errcode(),db:errmsg())
+			os.exit()
+		end
+		statement:reset()
 	end
---	return db
+end
+
+function ScrapeArchive() -- WARNING. This will produce a lot of I/O and network requests. It is _NOT_ a good idea to DOS the RT website.
+
 end
 
 function ScrapeNew()
-	local input = json.decode('{"RoosterTeeth":"http://roosterteeth.com/episode/recently-added","TheKnow":"http://theknow.roosterteeth.com/episode/recently-added"}')
-	for site,url in pairs(input) do
-		ScrapeNew_Helper(url,site)
+	local input = {RoosterTeeth=0;}
+	--RoosterTeeth=0; AchievementHunter=1; TheKnow=2; FunHaus=3; 4=???; ScrewAttack=5; CowChop=6; 7=???; GameAttack=8; <9 Does not exist as of 2016-11-15.
+	for site,id in pairs(input) do
+		ScrapeNew_Helper(id)
 	end
 end
 
 function ScrapeVideo(hash,site)
 	for entry in db:nrows("SELECT * FROM Metadata where hash IS \""..hash.."\"") do --Yes. Potential for SQL Injection. Spooky.
+		log("Working on video: "..hash)
 		local raw = wget(entry["url"])
 
 		local a = string.find(raw,"<div id=\"others-you-like-carousel-comment\">",1,true)+49
 		local data = string.sub(raw,a,string.find(raw,"-->",a,true)-1)
 
-		local statement = db:prepare("INSERT OR IGNORE INTO "..site.."(hash, time, title, show, description, season) VALUES(:hash, :time, :title, :show, :description, :season)")
+		local statement = db:prepare("INSERT OR IGNORE INTO "..site.."(hash, time, release, sponsor, title, show, description, season) VALUES(:hash, :time, :release, :sponsor, :title, :show, :description, :season)")
 		for key,value in ipairs(json.decode(data)) do 
 			if value["url"] == entry["url"] then
 				description = value["description"]
 				description = string.gsub(description,"[\n]+", "\n")
-				statement:bind_names({hash=entry["hash"];time=string.sub(value["sponsor_golive_at"],1,10);title=value["title"];show=value["season"]["show"]["name"];description=description;season=value["season"]["title"];})
+
+				--This only proves that it is sponsor-only content when scraped. Need to check it after a specfified time.
+				--Perhaps something like "IF release == [today's date] AND sponsor == 1 " check if it's still sponsored & update.
+				if value["star"] == true then
+					sponsor=1
+				else
+					sponsor=0
+				end
+
+				statement:bind_names({hash=entry["hash"];time=string.sub(value["sponsor_golive_at"],1,10);release=string.sub(value["member_golive_at"],1,10);sponsor=sponsor;title=value["title"];show=value["season"]["show"]["name"];description=description;season=value["season"]["title"];})
 				local val = statement:step() 
 				if val ~= 101 then
 					print("Something went wrong... "..val)
@@ -143,7 +139,7 @@ end
 function UpdateFrontend()
 	local output = {}
 	local count = 0
-	for entry in db:nrows("SELECT * FROM ( SELECT * FROM Metadata ORDER BY time DESC LIMIT 12 ) T1 ORDER BY time DESC") do
+	for entry in db:nrows("SELECT * FROM ( SELECT * FROM Metadata ORDER BY releaseDate DESC LIMIT 12 ) T1 ORDER BY releaseDate DESC") do
 		count = (count+1)
 		output[count] = entry
 	end
@@ -153,10 +149,28 @@ function UpdateFrontend()
 	file:close()
 end
 
+function log(input) --Rather than printing directly to stdout, add ability to disable informative text.
+	if verbose == true then
+		print(input)
+	end
+end
+
+verbose = true -- global variable, we're going to enable it for development purposes.
+
+--[[ 
+--Used to get command line arguments, work in progress.
+for _,value in ipairs(arg) do
+	if value == "-v" then
+		verbose = true
+	end
+end]]
+
 ScrapeNew()
+--[[ Disabled as code is being rewritten.
 for a in db:nrows("SELECT * FROM Metadata WHERE processed IS 0;") do
 	ScrapeVideo(a["hash"],a["site"])
 end
+]]
 UpdateFrontend()
 
 db:close()

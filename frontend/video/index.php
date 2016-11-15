@@ -16,5 +16,8 @@ if (!$table) { invalid(); }
 
 $results = $db->querySingle('SELECT * FROM ' . $table . ' WHERE hash IS "' . SQLite3::escapeString($hash) . '"', true); #Be careful when using the description. If you ECHO it straight we have the potential for XSS.
 #var_dump($results);
+
+readfile("../require/header.html");
 echo($results['title'] . PHP_EOL . strip_tags($results['description'],'<a>') );
+readfile("../require/footer.html");
 ?>
