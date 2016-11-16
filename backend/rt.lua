@@ -27,7 +27,7 @@ imageMedium	varchar(200)	Reduced resolution image (960px × 540px)
 releaseDate char(10)		Time episode was added to website, eg "2016-11-15"
 
 
-The following table will likely have to be redone.
+With such a large amount of data in Metadata, do we even need to scrape videos individually? 
 
 Table: [SITE NAME]
 hash 		char(64)
@@ -40,11 +40,12 @@ description varchar(1000)	--RWBY has 600+ character descriptions, so it had to b
 season		varchar(10)
 ]]
 
-require("socket")
-json = require("json")
-http = require("socket.http")
-https = require("ssl.https")
-lsha2 = require("lsha2")
+json	= require("json")
+lsha2	= require("lsha2")
+
+socket	= require("socket")
+http	= require("socket.http")
+https	= require("ssl.https")
 
 function hash(input)
 	local t = string.lower(string.gsub(string.gsub(input,"%s",""),"%W","")) --Strips spaces and non-alphanumeric characters. Part of "standardizing" the string.
@@ -52,47 +53,69 @@ function hash(input)
 end
 
 function wget(url)
-	--One line statement. Wow. Such savings.
-	return (http.request(url))
-end
-
-function swget(url) --Added for https support. Not currently required as https is a lot harder to process compared to http.
-	return (https.request(url))
-end
-
-function ScrapeNew_Helper(id)
-	local input = json.decode(wget("http://roosterteeth.com/api/internal/episodes/recent?channel="..id.."&page=1&limit=24"))
-	local statement = db:prepare("INSERT OR IGNORE INTO Metadata(hash, sponsor, channelUrl, slug, showName, title, caption, description, image, imageMedium, releaseDate) VALUES(:hash, :sponsor, :channelUrl, :slug, :showName, :title, :caption, :description, :image, :imageMedium, :releaseDate)")
-
-	for _,value in ipairs(input["data"]) do
-		if value["attributes"]["isPremium"] == true then
-			value["attributes"]["sponsor"] = 1 -- We store boolean values as base2 because of sqlite limitations on boolean values.
-		else
-			value["attributes"]["sponsor"] = 0
-		end
-
-		value["attributes"]["description"] = string.gsub(value["attributes"]["description"],"[\n]+", "\n")
-
-		value["attributes"]["hash"] = hash(value["attributes"]["title"])
-		value["attributes"]["releaseDate"] = string.sub(value["attributes"]["releaseDate"],1,10)
-
-		statement:bind_names(value["attributes"])
-		local val = statement:step() 
-		if val ~= 101 then
-			print("Something went wrong... "..val)
-			print(db:errcode(),db:errmsg())
-			os.exit()
-		end
-		statement:reset()
+	--The following if statement _does_ add some overhead, but it allows for both http and https calls to be processed.
+	local protocol = string.sub(url,1,5)
+	if protocol == "https" then
+		return (https.request(url))
+	elseif protocol == "http:" then
+		return (http.request(url))
+	else
+		log("Error fetching url '"..url.."', ignoring")
+		return "" --Empty string returned rather than nil
 	end
 end
 
-function ScrapeArchive() -- WARNING. This will produce a lot of I/O and network requests. It is _NOT_ a good idea to DOS the RT website.
+function Metadata_prepare(input)
+	if input["isPremium"] == true then
+		input["sponsor"] = 1 -- We store boolean values as base2 because of sqlite limitations on boolean values.
+	else
+		input["sponsor"] = 0
+	end
 
+	input["description"] = string.gsub(input["description"],"[\n]+", "\n")
+
+	input["hash"] = hash(input["title"])
+	input["releaseDate"] = string.sub(input["releaseDate"],1,10)
+
+	return input
+end
+
+function ScrapeNew_Helper(id,page)
+	page = page or 1 --Backwards compatibility (Since this was originally used for _new_ pages only.)
+	log("Getting page "..page.." with site id of "..id)
+	local input = json.decode(wget("http://roosterteeth.com/api/internal/episodes/recent?channel="..id.."&page="..page.."&limit=24"))
+	if input == nil or input["data"] == nil or input["data"][1] == nil then
+		return false --The RT Website doesn't actually return an error when asking for an 'empty' page, so this will hopefully stop it from getting out of control.
+	else
+		local statement = db:prepare("INSERT OR IGNORE INTO Metadata(hash, sponsor, channelUrl, slug, showName, title, caption, description, image, imageMedium, releaseDate) VALUES(:hash, :sponsor, :channelUrl, :slug, :showName, :title, :caption, :description, :image, :imageMedium, :releaseDate)")
+		for _,value in ipairs(input["data"]) do
+			statement:bind_names(Metadata_prepare(value["attributes"]))
+			local val = statement:step() 
+			if val ~= 101 then
+				print("Something went wrong... "..val)
+				print(db:errcode(),db:errmsg())
+				os.exit()
+			end
+			statement:reset()
+		end
+		return true
+	end
+end
+
+function ScrapeArchive(id)
+	-- WARNING. This will produce a lot of I/O and network requests. It is _NOT_ a good idea to DOS the RT website.
+	--Assumes that there is nothing in the database whatsoever beyond the first page.
+	log("Scraping all pages. This may take a while.")
+	count = 2
+	math.randomseed(os.time())
+	while ScrapeNew_Helper(id,count) do
+		count = (count+1)
+		socket.sleep(1.3+(math.random(5,55)/100)) --Small delay, might take >5 minutes to do a single website. Reduces the load on the RT servers, so it can't be _that_ bad.
+	end
 end
 
 function ScrapeNew()
-	local input = {RoosterTeeth=0;}
+	local input = {RoosterTeeth=0;} 
 	--RoosterTeeth=0; AchievementHunter=1; TheKnow=2; FunHaus=3; 4=???; ScrewAttack=5; CowChop=6; 7=???; GameAttack=8; <9 Does not exist as of 2016-11-15.
 	for site,id in pairs(input) do
 		ScrapeNew_Helper(id)
@@ -137,9 +160,10 @@ function ScrapeVideo(hash,site)
 end
 
 function UpdateFrontend()
+	--This function alone takes 60 ms to execute (Including program initialization overhead), so I doubt it's worth it to build in a function to ignore updates w/ no changes.
 	local output = {}
 	local count = 0
-	for entry in db:nrows("SELECT * FROM ( SELECT * FROM Metadata ORDER BY releaseDate DESC LIMIT 12 ) T1 ORDER BY releaseDate DESC") do
+	for entry in db:nrows("SELECT * FROM ( SELECT * FROM Metadata ORDER BY releaseDate DESC LIMIT 24 ) T1 ORDER BY releaseDate DESC") do
 		count = (count+1)
 		output[count] = entry
 	end
@@ -153,6 +177,7 @@ function log(input) --Rather than printing directly to stdout, add ability to di
 	if verbose == true then
 		print(input)
 	end
+	--Todo: Add the ability to log to file, rather than stdout. 
 end
 
 verbose = true -- global variable, we're going to enable it for development purposes.
