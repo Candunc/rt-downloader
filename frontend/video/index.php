@@ -15,7 +15,8 @@ $results = $db->querySingle('SELECT * FROM Metadata WHERE hash IS "' . SQLite3::
 
 if (!$results) { invalid(); }
 
-readfile("../require/header.html");
-echo($results['title'] . PHP_EOL . $results['description'] );
+# Below code is from http://stackoverflow.com/a/13009592/1687505
+echo(preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $results['title'] . '$3', file_get_contents("../require/header.html")));
+echo('<div class="video" style="margin: 2rem;"><div style="height:0.75rem;"></div><div class="ratio" style="background-image:url(\'' . $results['image'] . '\');"></div>' . PHP_EOL . '<div style="width: 90%;">br><h3>' . $results['title'] . '</h3><br><p>' . $results['description'] . '</p></div>' . PHP_EOL);
 readfile("../require/footer.html");
 ?>
