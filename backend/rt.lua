@@ -5,14 +5,13 @@ db = sqlite3.open("rt.sqlite3") --Open a local file read/write, doesn't have to 
 -- Table is MetaData because it contains basic information about a video;
 db:exec("CREATE TABLE IF NOT EXISTS Metadata (processed int default 0, hash char(64) NOT NULL, sponsor int, channelUrl varchar(32), slug varchar(100), showName varchar(100), title varchar(200), caption varchar(1000), description varchar(1000), image varchar(200), imageMedium varchar(200), releaseDate char(10), unique(hash))")
 
---[[ Disabled as rewrite of main code is underway. 
-for _,value in ipairs({"RoosterTeeth";"TheKnow";}) do --Starting small with a whole TWO tables. Insert the following into the table to enable: "AchievementHunter";"Funhaus";"ScrewAttack";"GameAttack";"CowChop";
-	db:exec("CREATE TABLE IF NOT EXISTS "..value.." (hash char(64) NOT NULL, time char(10), release char(10), sponsor INTEGER, title varchar(100) NOT NULL, show varchar(100) NOT NULL, description varchar(500), season varchar(10), UNIQUE(hash,title,description))")
-end]]
+--[[
+db:exec("CREATE TABLE IF NOT EXISTS Storage (hash char(64) NOT NULL, url varchar(100), unique(hash)")
+]]
 
 --[[
 Table: Metadata **NEW** with updates to the RoosterTeeth site this table has been completely changed. Good thing we're not in production.
-processed	int				Base2 Boolean (0,1); 1 if data has been scraped from the respective webpage.
+processed	int				Base2 Boolean (0,1); 1 if video has been downloaded (And therefore put into the Storage table.)
 hash 		char(64)		hash of title, used for linking additional information across tables.
 
 sponsor		int				Boolean, states if a title is restricted to sponsors or not.
@@ -27,17 +26,10 @@ imageMedium	varchar(200)	Reduced resolution image (960px × 540px)
 releaseDate char(10)		Time episode was added to website, eg "2016-11-15"
 
 
-With such a large amount of data in Metadata, do we even need to scrape videos individually? 
-
-Table: [SITE NAME]
-hash 		char(64)
-time 		char(10)		--Publication date (FOR SPONSORS) in the format yyyy-mm-dd
-release		char(10)		--**NEW** Publication date for non-sponsor accounts (Not public). NOTE: If this is the same as time, then it is sponsor only content.
-sponsor		boolean			--**NEW** Checks if the video is restricted to sponsors.
-title		varchar(100)
-show		varchar(100)
-description varchar(1000)	--RWBY has 600+ character descriptions, so it had to be upped from 500.
-season		varchar(10)
+Table: Storage
+hash	char(64)		Unique hash of title, inherited from Metadata.
+url		varchar(100)	The url to the media (Allows for distribution of the videos)
+???		???				Table is incomplete... not yet finished the implementation.
 ]]
 
 json	= require("json")
@@ -122,43 +114,6 @@ function ScrapeNew()
 	end
 end
 
-function ScrapeVideo(hash,site)
-	for entry in db:nrows("SELECT * FROM Metadata where hash IS \""..hash.."\"") do --Yes. Potential for SQL Injection. Spooky.
-		log("Working on video: "..hash)
-		local raw = wget(entry["url"])
-
-		local a = string.find(raw,"<div id=\"others-you-like-carousel-comment\">",1,true)+49
-		local data = string.sub(raw,a,string.find(raw,"-->",a,true)-1)
-
-		local statement = db:prepare("INSERT OR IGNORE INTO "..site.."(hash, time, release, sponsor, title, show, description, season) VALUES(:hash, :time, :release, :sponsor, :title, :show, :description, :season)")
-		for key,value in ipairs(json.decode(data)) do 
-			if value["url"] == entry["url"] then
-				description = value["description"]
-				description = string.gsub(description,"[\n]+", "\n")
-
-				--This only proves that it is sponsor-only content when scraped. Need to check it after a specfified time.
-				--Perhaps something like "IF release == [today's date] AND sponsor == 1 " check if it's still sponsored & update.
-				if value["star"] == true then
-					sponsor=1
-				else
-					sponsor=0
-				end
-
-				statement:bind_names({hash=entry["hash"];time=string.sub(value["sponsor_golive_at"],1,10);release=string.sub(value["member_golive_at"],1,10);sponsor=sponsor;title=value["title"];show=value["season"]["show"]["name"];description=description;season=value["season"]["title"];})
-				local val = statement:step() 
-				if val ~= 101 then
-					print("Something went wrong... "..val)
-					print(db:errcode(),db:errmsg())
-				end
-				statement:reset()
-				break
-			end
-		end
-
-		db:exec("UPDATE Metadata SET processed=1 WHERE hash is \""..hash.."\"")
-	end
-end
-
 function UpdateFrontend()
 	--This function alone takes 60 ms to execute (Including program initialization overhead), so I doubt it's worth it to build in a function to ignore updates w/ no changes.
 	local output = {}
@@ -173,29 +128,45 @@ function UpdateFrontend()
 	file:close()
 end
 
-function log(input) --Rather than printing directly to stdout, add ability to disable informative text.
-	if verbose == true then
+function log(input)
+	if verbose then --Same as verbose == true
 		print(input)
 	end
-	--Todo: Add the ability to log to file, rather than stdout. 
-end
 
-verbose = true -- global variable, we're going to enable it for development purposes.
-
---[[ 
---Used to get command line arguments, work in progress.
-for _,value in ipairs(arg) do
-	if value == "-v" then
-		verbose = true
+	--So errors can go to both stdout and logfile
+	if logging then
+		logfile:write(os.date("%F %T - ")..input.."\n")
 	end
-end]]
-
-ScrapeNew()
---[[ Disabled as code is being rewritten.
-for a in db:nrows("SELECT * FROM Metadata WHERE processed IS 0;") do
-	ScrapeVideo(a["hash"],a["site"])
 end
-]]
-UpdateFrontend()
+
+--Used to get command line arguments, work in progress.
+for id,value in ipairs(arg) do
+	if value == "--cron" then
+		ScrapeNew()
+		UpdateFrontend()
+
+	elseif value == "--archive" then
+		local a = tonumber(arg[id+1])
+		if a ~= nil then
+			ScrapeArchive(a)
+		else
+			print(arg[id+1].." is not a valid target to scrape.")
+		end
+
+	elseif value == "--log" then
+		logging = true
+		logfile = io.open("/opt/rt-downloader/log.txt","a")
+
+	elseif value == "-v" then
+		verbose = true
+
+	else
+		print("No arguments given, exiting...")
+	end
+end
+
+if logging then
+	logfile:close()
+end
 
 db:close()
