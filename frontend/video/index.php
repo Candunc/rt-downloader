@@ -1,4 +1,4 @@
-<?php #Todo: Create the html template for this page.
+<?php
 function invalid() {
 	http_response_code(400);
 	echo('400 Bad Request');
@@ -24,14 +24,19 @@ if ($results['sponsor'] != 0) {
 	echo('<p>This video is not available yet! Please check back on ' . $results['releaseDate'] . '.</p></div>' . PHP_EOL);
 	#Maybe have an estimated amount of hours here?
 } else {
-	/* Disabled as it isn't yet implemented.
-	$video = $db->querySingle('SELECT * FROM Storage WHERE hash IS "' . $hash . '"', true);
-	*/
-	if (!$video) {
-		echo('<p>Sorry, we don\'t have this video in our database yet. <a href="#">Click here</a> to attempt to manually load the video.</a></p></div>');
-	} else {
-		#Download button goes here, along with video data (IE Filesize, estimated time to download, ext.)
-	}
+#	Disabled as it isn't yet implemented.
+#	if (0 == $db->querySingle('SELECT processed FROM Metadata WHERE hash IS "' . $hash . '"')) { 
+#		echo('<p>Sorry, this video hasn't been processed yet. <a href="https://rtdownloader.com/api?action=addtoqueue&hash=' . $hash . '">Click here</a> to attempt to manually load the video.</p></div>');
+#	} else {
+#		$video = $db->querySingle('SELECT * FROM Storage WHERE hash IS "' . $hash . '"', true);
+#		if (!$video) {
+			echo('<p>This video is not available, however it is being processed by one of our nodes. Please check back later.</p></div>' . PHP_EOL);		
+#		} else {
+#			#Download button goes here, along with video data (IE Filesize, estimated time to download, ext.)
+#		}
+#	}
 }
 readfile("../require/footer.html");
+
+$db->close();
 ?>

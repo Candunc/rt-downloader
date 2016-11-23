@@ -10,7 +10,7 @@ fi
 mkdir /opt/rt-downloader/
 cp ./backend/rt.lua /opt/rt-downloader/
 
-apt-get -y install unzip make gcc git libreadline-dev sqlite3 libsqlite3-dev libssl-dev #youtube-dl ffmpeg handbrake-cli
+apt-get -y install unzip make gcc git libreadline-dev sqlite3 libsqlite3-dev libssl-dev #mariadb-server libmariadbd-dev 
 
 mkdir /tmp/lua
 cd /tmp/lua
@@ -37,3 +37,4 @@ luarocks install luajson	#Not sure if needed in final build, as json is really o
 luarocks install lsqlite3
 luarocks install luasec		#Includes LuaSocket
 luarocks install lsha2		#SHA2 failed to compile on test machine, replaced with lsha2. 
+#luarocks install luasql-mysql #Part of migration from sqlite to MariaDB. Should be compatible with MySQL plugin.

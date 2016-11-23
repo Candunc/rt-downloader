@@ -1,13 +1,15 @@
 #!/bin/which lua
+if _VERSION ~= "Lua 5.3" then
+	print("Possible incompatibility detected, using ".._VERSION..", expected Lua 5.3.\nDid you build from source?")
+end
+
 sqlite3 = require("lsqlite3")
 db = sqlite3.open("rt.sqlite3") --Open a local file read/write, doesn't have to exist.
 
 -- Table is MetaData because it contains basic information about a video;
 db:exec("CREATE TABLE IF NOT EXISTS Metadata (processed int default 0, hash char(64) NOT NULL, sponsor int, channelUrl varchar(32), slug varchar(100), showName varchar(100), title varchar(200), caption varchar(1000), description varchar(1000), image varchar(200), imageMedium varchar(200), releaseDate char(10), unique(hash))")
 
---[[
-db:exec("CREATE TABLE IF NOT EXISTS Storage (hash char(64) NOT NULL, url varchar(100), unique(hash)")
-]]
+--db:exec("CREATE TABLE IF NOT EXISTS Storage (hash char(64) NOT NULL, url varchar(100), unique(hash)")
 
 --[[
 Table: Metadata **NEW** with updates to the RoosterTeeth site this table has been completely changed. Good thing we're not in production.
@@ -114,13 +116,29 @@ function ScrapeNew()
 	end
 end
 
+function UpdateFrontend_helper(input)
+	--Added as we have the potential for each site to have it's own tab on the home page, similar to the new style of recently added on the RT Website.
+	local _table = {}
+	local count = 0
+	for entry in db:nrows("SELECT * FROM ( SELECT * FROM Metadata WHERE channelUrl IS \""..input.."\" ORDER BY releaseDate DESC LIMIT 24 ) T1 ORDER BY releaseDate DESC") do
+		count = (count+1)
+		_table[count] = entry
+	end
+	return _table
+end
+
 function UpdateFrontend()
 	--This function alone takes 60 ms to execute (Including program initialization overhead), so I doubt it's worth it to build in a function to ignore updates w/ no changes.
-	local output = {}
+	local output = {meta=os.date("%F %T");roosterteeth={};all={};}
+
 	local count = 0
 	for entry in db:nrows("SELECT * FROM ( SELECT * FROM Metadata ORDER BY releaseDate DESC LIMIT 24 ) T1 ORDER BY releaseDate DESC") do
 		count = (count+1)
-		output[count] = entry
+		output["all"][count] = entry
+	end
+
+	for key,value in pairs({roosterteeth="roosterteeth.com"}) do
+		output[key] = UpdateFrontend_helper(value)
 	end
 
 	local file = io.open("frontpage.json","w")
@@ -159,9 +177,6 @@ for id,value in ipairs(arg) do
 
 	elseif value == "-v" then
 		verbose = true
-
-	else
-		print("No arguments given, exiting...")
 	end
 end
 

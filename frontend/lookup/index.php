@@ -18,6 +18,8 @@ $db = new SQLite3('/opt/rt-downloader/rt.sqlite3');
 $hash = $db->querySingle('SELECT hash FROM Metadata WHERE slug IS "' . $url . '"');
 if (!$hash) { invalid(); }
 
+$db->close();
+
 header('Location: https://rtdownloader.com/video/?v=' . $hash, true, 303);
 
 ?>
