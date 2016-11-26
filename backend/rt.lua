@@ -3,11 +3,38 @@ if _VERSION ~= "Lua 5.3" then
 	print("Possible incompatibility detected, using ".._VERSION..", expected Lua 5.3.\nDid you build from source?")
 end
 
-sqlite3 = require("lsqlite3")
-db = sqlite3.open("rt.sqlite3") --Open a local file read/write, doesn't have to exist.
+require("config")
 
--- Table is MetaData because it contains basic information about a video;
-db:exec("CREATE TABLE IF NOT EXISTS Metadata (processed int default 0, hash char(64) NOT NULL, sponsor int, channelUrl varchar(32), slug varchar(100), showName varchar(100), title varchar(200), caption varchar(1000), description varchar(1000), image varchar(200), imageMedium varchar(200), releaseDate char(10), unique(hash))")
+json	= require("json")
+lsha2	= require("lsha2")
+
+socket	= require("socket")
+http	= require("socket.http")
+https	= require("ssl.https")
+
+
+--Ensure all dependancies are installed before screwing with SQL.
+if config["database"] == "sqlite" then
+	os.exit("Compatibility not tested. Closing...")
+	local driver = require("luasql.sqlite3")
+	local env = driver.sqlite3()
+	conn = env:connect("/opt/rt-downloader/rt.sqlite3")
+
+	conn:execute("CREATE TABLE IF NOT EXISTS Metadata (processed int default 0, hash char(64) NOT NULL, sponsor int, channelUrl varchar(32), slug varchar(100), showName varchar(100), title varchar(200), caption varchar(1000), description varchar(1000), image varchar(200), imageMedium varchar(200), releaseDate char(10), unique(hash))")
+
+elseif config["database"] == "mysql" then
+	local driver = require("luasql.mysql")
+	local env = driver.mysql()
+	conn,err = env:connect("rtdownloader",config["sql_user"],config["sql_pass"],config["sql_addr"],config["sql_port"])
+	if err ~= nil then
+		print(err)
+		os.exit()
+	end
+
+	--For MySQL, I'm using varbinary as I can store Unicode characters in it (EASILY) without it being bastardized by the engine.
+	conn:execute("CREATE TABLE IF NOT EXISTS Metadata (processed int default 0, hash char(64) NOT NULL, sponsor int, channelUrl varchar(32), slug varchar(100), showName varchar(100), title varbinary(800), caption varbinary(4000), description varbinary(4000), image varchar(200), imageMedium varchar(200), releaseDate char(10), unique(hash))")
+end
+
 
 --db:exec("CREATE TABLE IF NOT EXISTS Storage (hash char(64) NOT NULL, url varchar(100), unique(hash)")
 
@@ -33,13 +60,6 @@ hash	char(64)		Unique hash of title, inherited from Metadata.
 url		varchar(100)	The url to the media (Allows for distribution of the videos)
 ???		???				Table is incomplete... not yet finished the implementation.
 ]]
-
-json	= require("json")
-lsha2	= require("lsha2")
-
-socket	= require("socket")
-http	= require("socket.http")
-https	= require("ssl.https")
 
 function hash(input)
 	local t = string.lower(string.gsub(string.gsub(input,"%s",""),"%W","")) --Strips spaces and non-alphanumeric characters. Part of "standardizing" the string.
@@ -81,16 +101,19 @@ function ScrapeNew_Helper(id,page)
 	if input == nil or input["data"] == nil or input["data"][1] == nil then
 		return false --The RT Website doesn't actually return an error when asking for an 'empty' page, so this will hopefully stop it from getting out of control.
 	else
-		local statement = db:prepare("INSERT OR IGNORE INTO Metadata(hash, sponsor, channelUrl, slug, showName, title, caption, description, image, imageMedium, releaseDate) VALUES(:hash, :sponsor, :channelUrl, :slug, :showName, :title, :caption, :description, :image, :imageMedium, :releaseDate)")
 		for _,value in ipairs(input["data"]) do
-			statement:bind_names(Metadata_prepare(value["attributes"]))
-			local val = statement:step() 
-			if val ~= 101 then
-				print("Something went wrong... "..val)
-				print(db:errcode(),db:errmsg())
-				os.exit()
+
+			--sigh. It's almost not worth it to escape.
+			local v = {}
+			for key,value in pairs(Metadata_prepare(value["attributes"])) do
+				v[key] = conn:escape(tostring(value))
 			end
-			statement:reset()
+
+			-- I didn't do this by hand (Thankfully I can replace all 12 values with the right crap in one command). Hopefully it still, uh, works.
+			_,err = conn:execute("INSERT IGNORE INTO Metadata(hash, sponsor, channelUrl, slug, showName, title, caption, description, image, imageMedium, releaseDate) VALUES(\""..v["hash"].."\", \""..v["sponsor"].."\", \""..v["channelUrl"].."\", \""..v["slug"].."\", \""..v["showName"].."\", \""..v["title"].."\", \""..v["caption"].."\", \""..v["description"].."\", \""..v["image"].."\", \""..v["imageMedium"].."\", \""..v["releaseDate"].."\")")
+			if err ~= nil then
+				log(err)
+			end
 		end
 		return true
 	end
@@ -116,36 +139,6 @@ function ScrapeNew()
 	end
 end
 
-function UpdateFrontend_helper(input)
-	--Added as we have the potential for each site to have it's own tab on the home page, similar to the new style of recently added on the RT Website.
-	local _table = {}
-	local count = 0
-	for entry in db:nrows("SELECT * FROM ( SELECT * FROM Metadata WHERE channelUrl IS \""..input.."\" ORDER BY releaseDate DESC LIMIT 24 ) T1 ORDER BY releaseDate DESC") do
-		count = (count+1)
-		_table[count] = entry
-	end
-	return _table
-end
-
-function UpdateFrontend()
-	--This function alone takes 60 ms to execute (Including program initialization overhead), so I doubt it's worth it to build in a function to ignore updates w/ no changes.
-	local output = {meta=os.date("%F %T");roosterteeth={};all={};}
-
-	local count = 0
-	for entry in db:nrows("SELECT * FROM ( SELECT * FROM Metadata ORDER BY releaseDate DESC LIMIT 24 ) T1 ORDER BY releaseDate DESC") do
-		count = (count+1)
-		output["all"][count] = entry
-	end
-
-	for key,value in pairs({roosterteeth="roosterteeth.com"}) do
-		output[key] = UpdateFrontend_helper(value)
-	end
-
-	local file = io.open("frontpage.json","w")
-	file:write(json.encode(output))
-	file:close()
-end
-
 function log(input)
 	if verbose then --Same as verbose == true
 		print(input)
@@ -161,7 +154,6 @@ end
 for id,value in ipairs(arg) do
 	if value == "--cron" then
 		ScrapeNew()
-		UpdateFrontend()
 
 	elseif value == "--archive" then
 		local a = tonumber(arg[id+1])
@@ -184,4 +176,4 @@ if logging then
 	logfile:close()
 end
 
-db:close()
+conn:close()
