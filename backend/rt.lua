@@ -13,53 +13,17 @@ http	= require("socket.http")
 https	= require("ssl.https")
 
 
---Ensure all dependancies are installed before screwing with SQL.
---[[
-if config["database"] == "sqlite" then
-	os.exit("Compatibility not tested. Closing...")
-	local driver = require("luasql.sqlite3")
-	local env = driver.sqlite3()
-	conn = env:connect("/opt/rt-downloader/rt.sqlite3")
+local driver = require("luasql.mysql")
+local env = driver.mysql()
+conn,err = env:connect("rtdownloader",config["sql_user"],config["sql_pass"],config["sql_addr"],config["sql_port"])
+if err ~= nil then
+	print(err)
+	os.exit()
+end
 
-	conn:execute("CREATE TABLE IF NOT EXISTS Metadata (processed int default 0, hash char(64) NOT NULL, sponsor int, channelUrl varchar(32), slug varchar(100), showName varchar(100), title varchar(200), caption varchar(1000), description varchar(1000), image varchar(200), imageMedium varchar(200), releaseDate char(10), unique(hash))")
+--For MySQL, I'm using varbinary as I can store Unicode characters in it (EASILY) without it being bastardized by the engine.
+conn:execute("CREATE TABLE IF NOT EXISTS Metadata (processed tinyint SIGNED DEFAULT 0, hash char(64) NOT NULL, sponsor tinyint, channelUrl varchar(32), slug varchar(100), showName varchar(100), title varbinary(800), caption varbinary(4000), description varbinary(4000), image varchar(200), imageMedium varchar(200), releaseDate char(10), unique(hash))")
 
-elseif config["database"] == "mysql" then
-]]
---	Phase out SQLite support, we'll just depend on a heavy database as we need multiple write threads
-	local driver = require("luasql.mysql")
-	local env = driver.mysql()
-	conn,err = env:connect("rtdownloader",config["sql_user"],config["sql_pass"],config["sql_addr"],config["sql_port"])
-	if err ~= nil then
-		print(err)
-		os.exit()
-	end
-
-	--For MySQL, I'm using varbinary as I can store Unicode characters in it (EASILY) without it being bastardized by the engine.
-	conn:execute("CREATE TABLE IF NOT EXISTS Metadata (processed int default 0, hash char(64) NOT NULL, sponsor int, channelUrl varchar(32), slug varchar(100), showName varchar(100), title varbinary(800), caption varbinary(4000), description varbinary(4000), image varchar(200), imageMedium varchar(200), releaseDate char(10), unique(hash))")
---end
-
---[[
-Table: Metadata **NEW** with updates to the RoosterTeeth site this table has been completely changed. Good thing we're not in production.
-processed	int				Base2 Boolean (0,1); 1 if video has been downloaded (And therefore put into the Storage table.)
-hash 		char(64)		hash of title, used for linking additional information across tables.
-
-sponsor		int				Boolean, states if a title is restricted to sponsors or not.
-channelUrl	varchar(32)		Base portion of the URL
-slug		varchar(100)	Final portion of the URL; points to the webpage
-showName	varchar(100)	The name of the show, IE "Rooster Teeth Podcast"
-title		varchar(200)	The title of the episode
-caption		varchar(1000)	Tagline of episode?
-description	varchar(1000)	Plain (no HTML tags) description.
-image		varchar(200)	Full resolution episode image
-imageMedium	varchar(200)	Reduced resolution image (960px × 540px)
-releaseDate char(10)		Time episode was added to website, eg "2016-11-15"
-
-
-Table: Storage
-hash	char(64)		Unique hash of title, inherited from Metadata.
-url		varchar(100)	The url to the media (Allows for distribution of the videos)
-???		???				Table is incomplete... not yet finished the implementation.
-]]
 
 function hash(input)
 	local t = string.lower(string.gsub(string.gsub(input,"%s",""),"%W","")) --Strips spaces and non-alphanumeric characters. Part of "standardizing" the string.

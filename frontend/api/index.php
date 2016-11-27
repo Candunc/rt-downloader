@@ -3,35 +3,25 @@ function invalid() {
 	http_response_code(400);
 	echo('400 Bad Request');
 	safe_close();
+	die();
 }
 
 function safe_close() {
-	#Although not closing databases when doing read-operations seems to be alright, we are doing write operations now.
-	#Since we now have a number of workers writing to the same table, maybe we need to move to MariaDB.
-	$queue->close();
-	$db->close();
-	die();
+	if (isset($result)) { mysqli_free_result($result); }
+	if (isset($db)) { mysqli_close($db); }
 }
 
 if (!isset($_GET['action'])) { invalid(); }
 $action = $_GET['action'];
 
+$config = (array)include('../require/config.php');
+$db = mysqli_connect($config['sql_addr'],$config['sql_user'],$config['sql_pass'],'rtdownloader');
 
-#We have a seperate database as to prevent locking from the main thread, plus we may have multiple threads reading/writing to this. 
-$queue = new SQLite3('/opt/rt-downloader/api.sqlite3');
-$queue->exec('CREATE TABLE IF NOT EXISTS Queue (hash char(64) NOT NULL, added char(19) DEFAULT CURRENT_TIMESTAMP, json varchar(2000), unique(hash))');
+
 /*
-TABLE Queue
-hash	char(64)		See description in /backend/rt.lua; cross-{db,table} method reference to a certain video.
-added 	char(19)		Timestamp in format YYYY-MM-DD HH:MM:SS
-json	varchar(2000) 	JSON encoded value of row from the other database
-*/
-
-$db = new SQLite3('/opt/rt-downloader/rt.sqlite3');
-
 if ($action == 'addtoqueue') {
 	if (isset($_GET['hash'])) {
-		$hash = SQLite3::escapeString($_GET['hash']);
+		$hash = mysqli_escape_string($db,$_GET['hash']);
 		$data = $db->querySingle('SELECT * FROM Metadata WHERE hash IS "' . $hash . '"', true);
 		if (isset($data) and $data['processed'] == 0) {
 			#Attempt to avoid adding a video to our queue multiple times.
@@ -57,6 +47,7 @@ if ($action == 'addtoqueue') {
 		safe_close();
 	}
 }
+*/
 
 http_response_code(500);
 echo('500 Server couldn\'t handle request.');
