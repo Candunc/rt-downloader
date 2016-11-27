@@ -2,8 +2,8 @@ This file provides the content and reasoning behind the tables in the SQL Databa
 
 ###Metadata
 
-Column | Type | Explanation
--|-|-
+| Column | Type | Explanation |
+|---|---|---|
 processed | TINYINT SIGNED DEFAULT 0 | Representative of the current state of the video. See below addition.
 hash | CHAR(64) | Hash of the video title, converted to all lowercase, non-alphanumeric characters and spaces are stripped. Algorithm is SHA-256.
 sponsor | TINYINT | Boolean value stored as integer as a holdover from SQLite3. If 0 the video is available to the general public; 1 if restricted to sponsors.
