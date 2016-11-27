@@ -1,5 +1,6 @@
 config = {
-	database = "sqlite" --Acceptible options: sqlite, mysql
+	--Acceptible options: mysql. Maybe we can add support for other databases if required.
+	database = "mysql"
 	
 	--Only applicable if using MariaDB/MySQL
 ;	sql_name = "rtdownloader"

@@ -14,6 +14,7 @@ https	= require("ssl.https")
 
 
 --Ensure all dependancies are installed before screwing with SQL.
+--[[
 if config["database"] == "sqlite" then
 	os.exit("Compatibility not tested. Closing...")
 	local driver = require("luasql.sqlite3")
@@ -23,6 +24,8 @@ if config["database"] == "sqlite" then
 	conn:execute("CREATE TABLE IF NOT EXISTS Metadata (processed int default 0, hash char(64) NOT NULL, sponsor int, channelUrl varchar(32), slug varchar(100), showName varchar(100), title varchar(200), caption varchar(1000), description varchar(1000), image varchar(200), imageMedium varchar(200), releaseDate char(10), unique(hash))")
 
 elseif config["database"] == "mysql" then
+]]
+--	Phase out SQLite support, we'll just depend on a heavy database as we need multiple write threads
 	local driver = require("luasql.mysql")
 	local env = driver.mysql()
 	conn,err = env:connect("rtdownloader",config["sql_user"],config["sql_pass"],config["sql_addr"],config["sql_port"])
@@ -33,10 +36,7 @@ elseif config["database"] == "mysql" then
 
 	--For MySQL, I'm using varbinary as I can store Unicode characters in it (EASILY) without it being bastardized by the engine.
 	conn:execute("CREATE TABLE IF NOT EXISTS Metadata (processed int default 0, hash char(64) NOT NULL, sponsor int, channelUrl varchar(32), slug varchar(100), showName varchar(100), title varbinary(800), caption varbinary(4000), description varbinary(4000), image varchar(200), imageMedium varchar(200), releaseDate char(10), unique(hash))")
-end
-
-
---db:exec("CREATE TABLE IF NOT EXISTS Storage (hash char(64) NOT NULL, url varchar(100), unique(hash)")
+--end
 
 --[[
 Table: Metadata **NEW** with updates to the RoosterTeeth site this table has been completely changed. Good thing we're not in production.
@@ -132,7 +132,7 @@ function ScrapeArchive(id)
 end
 
 function ScrapeNew()
-	local input = {RoosterTeeth=0;} 
+	local input = {RoosterTeeth=0; TheKnow=2;}
 	--RoosterTeeth=0; AchievementHunter=1; TheKnow=2; FunHaus=3; 4=???; ScrewAttack=5; CowChop=6; 7=???; GameAttack=8; <9 Does not exist as of 2016-11-15.
 	for site,id in pairs(input) do
 		ScrapeNew_Helper(id)
@@ -162,6 +162,13 @@ for id,value in ipairs(arg) do
 		else
 			print(arg[id+1].." is not a valid target to scrape.")
 		end
+
+	elseif value == "--update" then
+		logging = true
+		update()
+
+		conn:close()
+		os.exit()
 
 	elseif value == "--log" then
 		logging = true
