@@ -24,6 +24,7 @@ end
 --For MySQL, I'm using varbinary as I can store Unicode characters in it (EASILY) without it being bastardized by the engine.
 conn:execute("CREATE TABLE IF NOT EXISTS Metadata (processed tinyint SIGNED DEFAULT 0, hash char(64) NOT NULL, sponsor tinyint, channelUrl varchar(32), slug varchar(100), showName varchar(100), title varbinary(800), caption varbinary(4000), description varbinary(4000), image varchar(200), imageMedium varchar(200), releaseDate char(10), unique(hash))")
 
+conn:execute("CREATE TABLE IF NOT EXISTS Storage (locked TINYINT SIGNED DEFAULT 0, hash CHAR(64) NOT NULL, added CHAR(19) NOT NULL, node VARCHAR(32), url VARCHAR(200), size VARCHAR(6), timeout CHAR(19), UNIQUE(hash) )")
 
 function hash(input)
 	local t = string.lower(string.gsub(string.gsub(input,"%s",""),"%W","")) --Strips spaces and non-alphanumeric characters. Part of "standardizing" the string.
@@ -103,6 +104,19 @@ function ScrapeNew()
 	end
 end
 
+function Update()
+	log("Update functionality not implemented. Exiting...")
+	os.exit()
+end
+
+function CleanDB()
+	--Any maintanance scripts for the database belong here. Recommended running every four hours.
+
+	--This statement cleans any video that has been set to process, however hasn't returned after four hours. 
+	conn:execute("UPDATE Storage SET locked=0,node=NULL,url=NULL,size=NULL,timeout=NULL WHERE locked=-1 AND timeout < DATE_SUB(NOW(), INTERVAL 4 HOUR)")
+end
+
+--INSERT INTO Storage(hash,added,timeout) VALUES("0b61190cc4ee9687641fada82b0fb5934e7cd1c6d5282b46c75dffa666f829a4",NOW(),DATE_ADD(NOW(), INTERVAL 4 HOUR))
 function log(input)
 	if verbose then --Same as verbose == true
 		print(input)

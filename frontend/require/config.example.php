@@ -1,5 +1,5 @@
 <?php
-return (object) array(
+return array(
 	'sql_name' => 'rtdownloader',
 	'sql_user' => '',
 	'sql_pass' => '',

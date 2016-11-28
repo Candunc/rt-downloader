@@ -11,43 +11,55 @@ function safe_close() {
 	if (isset($db)) { mysqli_close($db); }
 }
 
-if (!isset($_GET['action'])) { invalid(); }
-$action = $_GET['action'];
+function single_query($l_db,$l_query) {
+	#Weird variable names to try and avoid conflict with other variables. l_ represents local in this case.
+	$l_result = mysqli_query($l_db, $l_query);
+	$l_rows = mysqli_num_rows($l_result);
+	if ($l_rows == 0) {
+		$l_data = ""
+	} else {
+		$l_data = mysqli_fetch_array($l_result, MYSQLI_ASSOC);
+	}
+	mysqli_free_result($l_result);
+
+	#If number of rows is zero we return an empty string instead of the expected data.
+	return array('rows' => $l_rows, 'row' => $l_data);
+}
+
+if (!isset($_GET['action']) || !isset($_GET['hash'])) { invalid(); }
 
 $config = (array)include('../require/config.php');
 $db = mysqli_connect($config['sql_addr'],$config['sql_user'],$config['sql_pass'],'rtdownloader');
 
+$action = $_GET['action'];
+$hash = mysqli_escape_string($db,$_GET['hash']);
 
-/*
-if ($action == 'addtoqueue') {
-	if (isset($_GET['hash'])) {
-		$hash = mysqli_escape_string($db,$_GET['hash']);
-		$data = $db->querySingle('SELECT * FROM Metadata WHERE hash IS "' . $hash . '"', true);
-		if (isset($data) and $data['processed'] == 0) {
-			#Attempt to avoid adding a video to our queue multiple times.
-			$db->exec('UPDATE Metadata SET processed=1 WHERE hash IS ' . $hash);
-			$queue->exec('INSERT INTO Queue(hash, json) VALUES(' $hash . ', ' . SQLite3::escapeString(json_encode($data)) . ')');
-			header('Location: https://rtdownloader.com/video/?v=' . $hash, true, 303);
-			safe_close();
-		}
-	}
-} elseif ($action == 'download_start') {
-	#Architecture assumes single node for downloads. We need to add some sort of timeout / locking mechanism.
-	#This will _definitely_ break compatibility. Good thing this table is meant for temporary operations.
-	echo($queue->querySingle('SELECT json FROM Queue ORDER BY added ASC LIMIT 1')); 
-	safe_close();
-} elseif ($action == 'download_complete') {
-	if (isset($_GET['hash'] and isset($_GET['url']))) {
-		#URL is base64 encoded because I'm too lazy to properly implement POST nor escaping special characters. 
-		#If it's good enough for email, it's good enough for me!
-
-		#Technically, url should be changed to data, and data will be a base64 encoded json encoded array with all associated data.
-		$url = SQLite3::escapeString(base64_decode($_GET['url']));
-		$db->exec('INSERT INTO Storage(hash,url) VALUES('..SQLite3::escapeString($_GET['hash']) . ', ' . $url);
+if ($action == 'addtoqueue') {	
+	$data = single_query($db,'SELECT * FROM Metadata WHERE hash="' . $hash . '"');
+	if ($data['rows'] != 0 and $data['row']['processed'] == 0) {
+		mysqli_query('UPDATE Metadata SET processed=-1 WHERE hash="' . $hash . '"');
+		mysqli_query('INSERT INTO Storage(hash,added) VALUES(' $hash . ', NOW() )');
+		header('Location: https://rtdownloader.com/video/?v=' . $hash, true, 303);
 		safe_close();
+		die();
 	}
+
+} elseif ($action == 'download_start') {
+	$data = single_query($db,'SELECT * FROM Storage WHERE locked=0 ORDER BY added ASC LIMIT 1');
+	if ($data['rows'] != 0) {
+		#Is it possible to do an SQL injection from an SQL column?
+		mysqli_query($db,'UPDATE Storage SET locked=1 WHERE HASH="' . mysqli_escape_string($db,$data['rows']['hash']) . '"')
+		echo(json_encode($data['rows']);
+	} else {
+		echo('{"error":"no videos found"}');
+	}
+	safe_close();
+	die();
+
+} elseif ($action == 'download_complete') {
+	# Not actually implemented yet.
 }
-*/
+
 
 http_response_code(500);
 echo('500 Server couldn\'t handle request.');
