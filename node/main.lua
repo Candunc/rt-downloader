@@ -46,9 +46,27 @@ function wget(url)
 	end
 end
 
+function post(url,body)
+	local protocol = string.sub(url,1,5)
+	if protocol == "https" then
+		local output = {}
+		https.request{method="POST",url=url,source=ltn12.source.string(body),sink=ltn12.sink.table(output),headers={USER_AGENT="luasec/0.6.1 (rt-downloader)",["content-type"]="text/plain",["content-length"]=tostring(#body)},protocol="tlsv1_2"}
+
+		return table.concat(output)
+	elseif protocol == "http:" then
+		local output = {}
+		http.request{method="POST",url=url,source=ltn12.source.string(body),sink=ltn12.sink.table(output),headers={USER_AGENT="luasocket/3.0 (rt-downloader)",["content-type"]="text/plain",["content-length"]=tostring(#body)}}
+
+		return table.concat(output)
+	else
+		log("Error fetching url '"..url.."', ignoring")
+		return ""
+	end
+end
+
 function exec(command)
 --	Execute command but throw away all output. We shouldn't need it as the program should be blocked while execution takes place.
-	os.execute(command.." ")--">/dev/null 2>/dev/null")
+	os.execute(command.." /dev/null 2>/dev/null")
 end
 
 function log(input)
@@ -72,7 +90,7 @@ log("Downloading video '"..input["title"].."'")
 exec("/usr/local/bin/youtube-dl -u \""..config["username"].."\" -p \""..config["password"].."\" -o \""..input["hash"].."_temp.mp4\" \"https://"..input["channelUrl"].."/episode/"..input["slug"].."\"")
 
 --From http://superuser.com/a/522853/607043, need to look more into optimization.
-exec("ffmpeg -i \""..input["hash"].."_temp.mp4\" -c:v libx264 -crf 18 -preset slow -c:a libmp3lame -b:a 320k \""..input["hash"]..".mp4\"")
+exec("ffmpeg -i \""..input["hash"].."_temp.mp4\" -c:v libx264 -crf 18 -preset medium  -c:a copy \""..input["hash"]..".mp4\"")
 exec("rm \""..input["hash"]..".mp4\"")
 
 --Now here is where we report the completed video to the frontend.

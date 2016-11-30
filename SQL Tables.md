@@ -37,7 +37,7 @@ This file provides the content and reasoning behind the tables in the SQL Databa
 | locked | TINYINT SIGNED DEFAULT 0 | Signifies whether a video is locked. If locked, assumes that the remainder of the fields are filled out. See below table for possible values.
 | hash | CHAR(64) <br> NOT NULL | Hash of the video; inherited from Metadata.
 | added | CHAR(19) <br> NOT NULL| Timestamp of when video was added to database. Used to prioritize  videos that have been in the table for longer.
-| node | VARCHAR(32) | IP Address or unique domain name of a node; used to record node contribution.
+| node | VARCHAR(50) | IP Address or unique domain name of a node; used to record node contribution.
 | url | VARCHAR(200) | The link for a video that is available for downloading, will be reported to the user.
 | size | VARCHAR(6) | The size of the file in Megabytes (Divide by 1000 for Gigabytes)
 | timeout | CHAR(19) | When timeout is reached video is assumed to have failed for whatever reason. Reset locked status to 0 and nullify the node, url, and timeout columns.

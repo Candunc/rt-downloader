@@ -48,6 +48,7 @@ if ($action == 'addtoqueue') {
 		}
 	}
 
+#Note: Past here is API functions. We're no longer using invalid() to indicate a bad response, as the clients are looking for a json encoded error.
 } elseif ($action == 'getdownload') {
 	# Malicious queries can be made against this address, so in future interations we need to limit one {client,ip address} to one reservation.
 
@@ -70,7 +71,19 @@ if ($action == 'addtoqueue') {
 	die();
 
 } elseif ($action == 'download_complete') {
-	# Not actually implemented yet.
+	if (isset($HTTP_RAW_POST_DATA)) {
+		$data = json_decode($HTTP_RAW_POST_DATA,true);
+		$node = mysqli_escape_string( substr($_SERVER['HTTP_CLIENT_IP']?:($_SERVER['HTTP_X_FORWARDE‌​D_FOR']?:$_SERVER['REMOTE_ADDR']), 1, 40) );
+		#Not trusting the node to specify domain yet.
+
+		if (isset($data) && isset($data['hash'] && isset($data['url'])) {
+			mysqli_query($db,'UPDATE Storage SET locked=-1,url=' . mysqli_escape_string($db,$data['url'] . ',node=' . $node . ' WHERE hash=' . mysqli_escape_string($data['hash']));
+		} else {
+			echo('{"error":"malformed post"}');
+		}
+		safe_close();
+		die();
+	}
 }
 
 

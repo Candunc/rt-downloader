@@ -36,12 +36,12 @@ function wget(url)
 	local protocol = string.sub(url,1,5)
 	if protocol == "https" then
 		local output = {}
-		https.request{url=url,sink=ltn12.sink.table(output),headers={USER_AGENT="luasec/0.6.1 (rtdownloader)"},protocol="tlsv1_2"}
+		https.request{url=url,sink=ltn12.sink.table(output),headers={USER_AGENT="luasec/0.6.1 (rt-downloader)"},protocol="tlsv1_2"}
 
 		return table.concat(output)
 	elseif protocol == "http:" then
 		local output = {}
-		http.request{url=url,sink=ltn12.sink.table(output),headers={USER_AGENT="luasocket/3.0 (rtdownloader)"}}
+		http.request{url=url,sink=ltn12.sink.table(output),headers={USER_AGENT="luasocket/3.0 (rt-downloader)"}}
 
 		return table.concat(output)
 	else
