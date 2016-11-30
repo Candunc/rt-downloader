@@ -11,7 +11,7 @@ lsha2	= require("lsha2")
 socket	= require("socket")
 http	= require("socket.http")
 https	= require("ssl.https")
-
+ltn12	= require("ltn12")
 
 local driver = require("luasql.mysql")
 local env = driver.mysql()
@@ -35,9 +35,15 @@ function wget(url)
 	--The following if statement _does_ add some overhead, but it allows for both http and https calls to be processed.
 	local protocol = string.sub(url,1,5)
 	if protocol == "https" then
-		return (https.request(url))
+		local output = {}
+		https.request{url=url,sink=ltn12.sink.table(output),headers={USER_AGENT="luasec/0.6.1 (rtdownloader)"},protocol="tlsv1_2"}
+
+		return table.concat(output)
 	elseif protocol == "http:" then
-		return (http.request(url))
+		local output = {}
+		http.request{url=url,sink=ltn12.sink.table(output),headers={USER_AGENT="luasocket/3.0 (rtdownloader)"}}
+
+		return table.concat(output)
 	else
 		log("Error fetching url '"..url.."', ignoring")
 		return "" --Empty string returned rather than nil

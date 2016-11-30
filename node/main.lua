@@ -24,15 +24,22 @@ json	= require("json")
 socket	= require("socket")
 http	= require("socket.http")
 https	= require("ssl.https")
+ltn12	= require("ltn12")
 
 file = io.open("log.txt","a")
 
 function wget(url)
 	local protocol = string.sub(url,1,5)
 	if protocol == "https" then
-		return (https.request(url))
+		local output = {}
+		https.request{url=url,sink=ltn12.sink.table(output),headers={USER_AGENT="luasec/0.6.1 (rtdownloader)"},protocol="tlsv1_2"}
+
+		return table.concat(output)
 	elseif protocol == "http:" then
-		return (http.request(url))
+		local output = {}
+		http.request{url=url,sink=ltn12.sink.table(output),headers={USER_AGENT="luasocket/3.0 (rtdownloader)"}}
+
+		return table.concat(output)
 	else
 		log("Error fetching url '"..url.."', ignoring")
 		return ""
@@ -41,10 +48,11 @@ end
 
 function exec(command)
 --	Execute command but throw away all output. We shouldn't need it as the program should be blocked while execution takes place.
-	os.execute(command.." >/dev/null 2>/dev/null")
+	os.execute(command.." ")--">/dev/null 2>/dev/null")
 end
 
 function log(input)
+	print(input)
 	file:write(os.date("%F %T - ")..input.."\n")
 end
 
@@ -53,14 +61,15 @@ function exit()
 	os.exit()
 end
 
-
-input = json.decode(wget("https://rtdownloader.com/api/?action=getdownload"))
+input = json.decode(wget(config["remote_url"].."?action=getdownload"))
 if input["error"] ~= nil then
-	log("Cannot process video: '"..input["error"])
+	log("Cannot process video: '"..input["error"].."'")
 	exit()
 end
 
-exec("youtube-dl -u \""..config["username"].."\" -p \""..config["password"].."\" -o \""..input["hash"].."_temp.mp4\" \"http://"..input["channelUrl"].."/episode/"..input["slug"].."\"")
+log("Downloading video '"..input["title"].."'")
+
+exec("/usr/local/bin/youtube-dl -u \""..config["username"].."\" -p \""..config["password"].."\" -o \""..input["hash"].."_temp.mp4\" \"https://"..input["channelUrl"].."/episode/"..input["slug"].."\"")
 
 --From http://superuser.com/a/522853/607043, need to look more into optimization.
 exec("ffmpeg -i \""..input["hash"].."_temp.mp4\" -c:v libx264 -crf 18 -preset slow -c:a libmp3lame -b:a 320k \""..input["hash"]..".mp4\"")

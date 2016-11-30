@@ -57,7 +57,7 @@ if ($action == 'addtoqueue') {
 		$hash = mysqli_escape_string($db,$data['output']['hash']);
 		#Is it possible to do an SQL injection from an SQL column?
 
-		mysqli_query($db,'UPDATE Storage SET locked=1 WHERE HASH="' . $hash . '"');
+		mysqli_query($db,'UPDATE Storage SET locked=1,timeout=DATE_ADD(NOW(), INTERVAL 4 HOUR) WHERE HASH="' . $hash . '"');
 
 		#Reuse variable b/c we only needed it for the hash previously
 		$data = single_query($db,'SELECT * FROM Metadata WHERE HASH="' . $hash . '"');
