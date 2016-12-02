@@ -69,6 +69,14 @@ function exec(command)
 	os.execute(command.." /dev/null 2>/dev/null")
 end
 
+function getexec(command)
+--	Execute command but return output. Lame naming scheme!
+	local handle = io.popen(command.." 2>&1")
+	local data = handle:read("*a")
+	handle:close()
+	return data
+end
+
 function log(input)
 	print(input)
 	file:write(os.date("%F %T - ")..input.."\n")
@@ -97,8 +105,19 @@ else
 	exec("ffmpeg -i \""..input["hash"].."_temp.mp4\" -c:v libx264 -crf 22 -preset medium  -c:a copy \""..input["hash"]..".mp4\"")
 end
 
-exec("rm \""..input["hash"]..".mp4\"")
+--These variables are used for the formatting of the output.
+size = getexec("du --block-size=MB \""..input["hash"]..".mp4\"")
+info = getexec("avprobe -hide_banner \""..input["hash"]..".mp4\"")
+info_int = string.find(info,"Duration: ")
 
---Now here is where we report the completed video to the frontend.
+output = {
+	url = (config["local_url"].."/"..input["hash"]..".mp4")
+	hash = input["hash"]
+	size = string.sub(size,1,(string.find(size,"MB")-1))
+	length = string.sub(info,info_int+10,(string.find(info,",",info_int)-4))
+}
+
+exec("rm \""..input["hash"].."_temp.mp4\"; mv \""..input["hash"]..".mp4 "..config["www_dir"].."/\"")
+post(config["remote_url"].."?action=download_complete",json.encode(output))
 
 exit()

@@ -39,7 +39,8 @@ This file provides the content and reasoning behind the tables in the SQL Databa
 | added | CHAR(19) <br> NOT NULL| Timestamp of when video was added to database. Used to prioritize  videos that have been in the table for longer.
 | node | VARCHAR(50) | IP Address or unique domain name of a node; used to record node contribution.
 | url | VARCHAR(200) | The link for a video that is available for downloading, will be reported to the user.
-| size | VARCHAR(6) | The size of the file in Megabytes (Divide by 1000 for Gigabytes)
+| size | UNSIGNED SMALLINT | The size of the file in Megabytes (~64 GB max filesize)
+| length | CHAR(8) | The Length of the video, specified in HH:MM:SS
 | timeout | CHAR(19) | When timeout is reached video is assumed to have failed for whatever reason. Reset locked status to 0 and nullify the node, url, and timeout columns.
 |   | UNIQUE(hash) | Prevent duplicate entries into the table.
 

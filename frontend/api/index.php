@@ -76,8 +76,9 @@ if ($action == 'addtoqueue') {
 		$node = mysqli_escape_string( substr($_SERVER['HTTP_CLIENT_IP']?:($_SERVER['HTTP_X_FORWARDE‌​D_FOR']?:$_SERVER['REMOTE_ADDR']), 1, 40) );
 		#Not trusting the node to specify domain yet.
 
-		if (isset($data) && isset($data['hash'] && isset($data['url'])) {
-			mysqli_query($db,'UPDATE Storage SET locked=-1,url=' . mysqli_escape_string($db,$data['url'] . ',node=' . $node . ' WHERE hash=' . mysqli_escape_string($data['hash']));
+		# I mean... it is better than nested IF statements, right?
+		if (isset($data) && isset($data['hash']) && isset($data['url']) && isset($data['length']) && isset($data['size']) ) {
+			mysqli_query($db,'UPDATE Storage SET locked=-1,url="' . mysqli_escape_string($db,$data['url']) . '",node="' . $node . '",length="' . mysqli_escape_string($db,$data['length']) . '",size="' . mysqli_escape_string($db,$data['size']) . '" WHERE hash=' . mysqli_escape_string($data['hash']));
 		} else {
 			echo('{"error":"malformed post"}');
 		}

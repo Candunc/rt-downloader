@@ -24,7 +24,7 @@ end
 --For MySQL, I'm using varbinary as I can store Unicode characters in it (EASILY) without it being bastardized by the engine.
 conn:execute("CREATE TABLE IF NOT EXISTS Metadata (processed tinyint SIGNED DEFAULT 0, hash char(64) NOT NULL, sponsor tinyint, channelUrl varchar(32), slug varchar(100), showName varchar(100), title varbinary(800), caption varbinary(4000), description varbinary(4000), image varchar(200), imageMedium varchar(200), releaseDate char(10), unique(hash))")
 
-conn:execute("CREATE TABLE IF NOT EXISTS Storage (locked TINYINT SIGNED DEFAULT 0, hash CHAR(64) NOT NULL, added CHAR(19) NOT NULL, node VARCHAR(32), url VARCHAR(200), size VARCHAR(6), timeout CHAR(19), UNIQUE(hash) )")
+conn:execute("CREATE TABLE IF NOT EXISTS Storage (locked TINYINT SIGNED DEFAULT 0, hash CHAR(64) NOT NULL, added CHAR(19) NOT NULL, node VARCHAR(32), url VARCHAR(200), size SMALLINT UNSIGNED, length CHAR(8), timeout CHAR(19), UNIQUE(hash) )")
 
 function hash(input)
 	local t = string.lower(string.gsub(string.gsub(input,"%s",""),"%W","")) --Strips spaces and non-alphanumeric characters. Part of "standardizing" the string.

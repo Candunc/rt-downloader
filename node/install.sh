@@ -8,7 +8,7 @@ fi
 # Author's node: Most of this is from the backend install.sh
 # Although the install / compilation parts are the same, different packages are used.
 
-apt-get -y install unzip make gcc git libreadline-dev libssl-dev ffmpeg 
+apt-get -y install unzip make gcc git libreadline-dev libssl-dev ffmpeg libav-tools
 
 
 mkdir /tmp/lua
