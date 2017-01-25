@@ -85,6 +85,18 @@ if ($action == 'addtoqueue') {
 		safe_close();
 		die();
 	}
+	# Camel Case because fuck consistancy.
+} elseif ($action == 'getLatest') {
+	# This is an API for a personal project. I mean, I'm scraping it anyways, right?
+
+	#Copy/Pasta from home/index.php file
+	$output = array();
+	$result = mysqli_query($db, 'SELECT * FROM ( SELECT * FROM Metadata WHERE channelUrl="roosterteeth.com" ORDER BY releaseDate DESC LIMIT 24 ) T1 ORDER BY releaseDate DESC');
+	$count = 0;
+	while ( $value = mysqli_fetch_array($result, MYSQLI_ASSOC) ) {
+		$output[++$count] = $value;
+	}
+	echo(json_encode($output));
 }
 
 

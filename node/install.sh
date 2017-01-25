@@ -15,7 +15,7 @@ mkdir /tmp/lua
 cd /tmp/lua
 
 #youtube-dl package is old
-wget https://github.com/rg3/youtube-dl/releases/download/2016.11.27/youtube-dl
+wget http://www.youtube-dl.org/downloads/latest/youtube-dl
 chmod +x /tmp/lua/youtube-dl
 mv /tmp/lua/youtube-dl /usr/local/bin
 
