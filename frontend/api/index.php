@@ -42,15 +42,10 @@ if ($action == 'addtoqueue') {
 		if ($data['rows'] != 0 and $data['output']['processed'] == 0) {
 			mysqli_query($db,'UPDATE Metadata SET processed=-1 WHERE hash="' . $hash . '"');
 			mysqli_query($db,'INSERT INTO Storage(hash,added) VALUES("' . $hash . '", NOW() )');
-			header('Location: https://rtdownloader.com/video/?v=' . $hash, true, 303);
-			safe_close();
-			die();
-		} else {
-			#Assume video is already in queue
-			header('Location: https://rtdownloader.com/video/?v=' . $hash, true, 303);
-			safe_close();
-			die();
 		}
+		header('Location: https://rtdownloader.com/video/?v=' . $hash, true, 303);
+		safe_close();
+		die();
 	}
 
 #Note: Past here is API functions. We're no longer using invalid() to indicate a bad response, as the clients are looking for a json encoded error.
