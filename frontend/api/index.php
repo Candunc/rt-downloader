@@ -45,6 +45,11 @@ if ($action == 'addtoqueue') {
 			header('Location: https://rtdownloader.com/video/?v=' . $hash, true, 303);
 			safe_close();
 			die();
+		} else {
+			#Assume video is already in queue
+			header('Location: https://rtdownloader.com/video/?v=' . $hash, true, 303);
+			safe_close();
+			die();
 		}
 	}
 
@@ -97,6 +102,7 @@ if ($action == 'addtoqueue') {
 		$output[++$count] = $value;
 	}
 	echo(json_encode($output));
+	die();
 }
 
 
