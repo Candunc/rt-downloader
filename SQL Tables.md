@@ -18,6 +18,7 @@ This file provides the content and reasoning behind the tables in the SQL Databa
 |  image | VARCHAR(200) | Full resolution version of the episode thumbnail.
 | imageMedium | VARCHAR(200) | Reduced resolution version of the episode thumbnail. (960px x 540px)
 | releaseDate | CHAR(10) | The date the video was added to the website, formatted as ISO 8601 Date.
+| m3u8URL | VARCHAR(200) | If possible, extract the m3u8 file from webpage.
 |   | UNIQUE(hash) | Prevent duplicate entries for the same video. Collision attacks are unlikely so no videos will be accidentally ignored.
 
 

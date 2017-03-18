@@ -3,7 +3,7 @@ if _VERSION ~= "Lua 5.3" then
 	print("Possible incompatibility detected, using ".._VERSION..", expected Lua 5.3.\nDid you build from source?")
 end
 
-require("config")
+config	= require("config")
 
 json	= require("json")
 lsha2	= require("lsha2")
@@ -22,7 +22,7 @@ if err ~= nil then
 end
 
 --For MySQL, I'm using varbinary as I can store Unicode characters in it (EASILY) without it being bastardized by the engine.
-conn:execute("CREATE TABLE IF NOT EXISTS Metadata (processed tinyint SIGNED DEFAULT 0, hash char(64) NOT NULL, sponsor tinyint, channelUrl varchar(32), slug varchar(100), showName varchar(100), title varbinary(800), caption varbinary(4000), description varbinary(4000), image varchar(200), imageMedium varchar(200), releaseDate char(10), unique(hash))")
+conn:execute("CREATE TABLE IF NOT EXISTS Metadata (processed tinyint SIGNED DEFAULT 0, hash char(64) NOT NULL, sponsor tinyint, channelUrl varchar(32), slug varchar(100), showName varchar(100), title varbinary(800), caption varbinary(4000), description varbinary(4000), image varchar(200), imageMedium varchar(200), releaseDate char(10), m3u8URL varchar(200), unique(hash))")
 
 conn:execute("CREATE TABLE IF NOT EXISTS Storage (locked TINYINT SIGNED DEFAULT 0, hash CHAR(64) NOT NULL, added CHAR(19) NOT NULL, node VARCHAR(32), url VARCHAR(200), size SMALLINT UNSIGNED, length CHAR(8), timeout CHAR(19), UNIQUE(hash) )")
 
@@ -48,6 +48,18 @@ function wget(url)
 		log("Error fetching url '"..url.."', ignoring")
 		return "" --Empty string returned rather than nil
 	end
+end
+
+--	Funny how we started with scraping, then went to a pure json approach, and back to scraping.
+function m3u8_extractor(url)
+	--This won't always succeed, either catch errors or force chromium to be running.
+	local handle = io.popen("node extractor.js \""..url.."\"")
+	local webpage = handle:read("*a")
+	handle:close()
+
+	local _,pointA = string.find(webpage,"file: '",1,true)
+	local pointB = string.find(webpage,"'",start,true)
+	return (string.sub(webpage,pointA,pointB))
 end
 
 function Metadata_prepare(input)
