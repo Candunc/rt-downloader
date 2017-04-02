@@ -99,10 +99,10 @@ exec("/usr/local/bin/youtube-dl -u \""..config["username"].."\" -p \""..config["
 
 if input["showName"] == "RT Animated Adventures" then
 	--"Custom" optimization. Because of the video's style, it can be compressed much more.
-	exec("ffmpeg -threads 2 -i \""..input["hash"].."_temp.mp4\" -c:v libx264 -crf 18 -preset slow -bsf:a aac_adtstoasc \""..input["hash"]..".mp4\"")
+	exec("ffmpeg -i \""..input["hash"].."_temp.mp4\" -c:v libx264 -crf 18 -preset slow  -c:a copy \""..input["hash"]..".mp4\"")
 else
 	--From http://superuser.com/a/522853/607043, need to look more into optimization.
-	exec("ffmpeg -threads 2 -i \""..input["hash"].."_temp.mp4\" -c:v libx264 -crf 22 -preset medium -bsf:a aac_adtstoasc \""..input["hash"]..".mp4\"")
+	exec("ffmpeg -i \""..input["hash"].."_temp.mp4\" -c:v libx264 -crf 22 -preset medium  -c:a copy \""..input["hash"]..".mp4\"")
 end
 
 --These variables are used for the formatting of the output.
