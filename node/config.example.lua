@@ -12,3 +12,5 @@ config = {
 	username = "";
 	password = "";
 }
+
+return config
