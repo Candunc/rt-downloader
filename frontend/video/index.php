@@ -33,7 +33,7 @@ if ($value['sponsor'] != 0) {
 } else {
 #	Disabled as it isn't yet implemented.
 #	if (0 == $db->querySingle('SELECT processed FROM Metadata WHERE hash IS "' . $hash . '"')) { 
-#		echo('<p>Sorry, this video hasn't been processed yet. <a href="https://rtdownloader.com/api?action=addtoqueue&hash=' . $hash . '">Click here</a> to attempt to manually load the video.</p></div>');
+#		echo('<p>Sorry, this video hasn't been processed yet. <a href="https://rtdownloader.com/api?action=add_to_queue&hash=' . $hash . '">Click here</a> to attempt to manually load the video.</p></div>');
 #	} else {
 #		$video = $db->querySingle('SELECT * FROM Storage WHERE hash IS "' . $hash . '"', true);
 #		if (!$video) {

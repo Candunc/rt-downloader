@@ -34,7 +34,7 @@ $db = mysqli_connect($config['sql_addr'],$config['sql_user'],$config['sql_pass']
 
 $action = $_GET['action'];
 
-if ($action == 'addtoqueue') {
+if ($action == 'add_to_queue') {
 	#a hash is only required for this function at the moment.
 	if ( isset($_GET['hash']) ) {
 		$hash = mysqli_escape_string($db,$_GET['hash']);
@@ -49,7 +49,7 @@ if ($action == 'addtoqueue') {
 	}
 
 #Note: Past here is API functions. We're no longer using invalid() to indicate a bad response, as the clients are looking for a json encoded error.
-} elseif ($action == 'getdownload') {
+} elseif ($action == 'get_download') {
 	# Malicious queries can be made against this address, so in future interations we need to limit one {client,ip address} to one reservation.
 
 	#Three SQL Queries are executed, two read & one write. Can (and should) this be simplified?
@@ -85,19 +85,6 @@ if ($action == 'addtoqueue') {
 		safe_close();
 		die();
 	}
-	# Camel Case because fuck consistancy.
-} elseif ($action == 'getLatest') {
-	# This is an API for a personal project. I mean, I'm scraping it anyways, right?
-
-	#Copy/Pasta from home/index.php file
-	$output = array();
-	$result = mysqli_query($db, 'SELECT * FROM ( SELECT * FROM Metadata WHERE channelUrl="roosterteeth.com" ORDER BY releaseDate DESC LIMIT 24 ) T1 ORDER BY releaseDate DESC');
-	$count = 0;
-	while ( $value = mysqli_fetch_array($result, MYSQLI_ASSOC) ) {
-		$output[++$count] = $value;
-	}
-	echo(json_encode($output));
-	die();
 }
 
 

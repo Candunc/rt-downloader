@@ -14,3 +14,5 @@ end
 -- It is recommended to run it every four hours.
 
 conn:execute("UPDATE Storage SET locked=0,node=NULL,url=NULL,size=NULL,timeout=NULL WHERE locked=-1 AND timeout < DATE_SUB(NOW(), INTERVAL 4 HOUR)")
+
+conn:close()

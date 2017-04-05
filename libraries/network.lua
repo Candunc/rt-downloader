@@ -31,7 +31,7 @@ function network.post(url,body)
 	local protocol = getProtocol(url)
 	if protocol == "https" then
 		https.request{method="POST",url=url,source=ltn12.source.string(body),sink=ltn12.sink.table(output),headers={USER_AGENT="luasec/0.6.1 (rt-downloader)",["content-type"]="text/plain",["content-length"]=tostring(#body)},protocol="tlsv1_2"}
-	elseif protocl == "http:" then
+	elseif protocol == "http:" then
 		http.request{method="POST",url=url,source=ltn12.source.string(body),sink=ltn12.sink.table(output),headers={USER_AGENT="luasocket/3.0 (rt-downloader)",["content-type"]="text/plain",["content-length"]=tostring(#body)}}
 	else
 		-- TODO: Handle invalid schemes
